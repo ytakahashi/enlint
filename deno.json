@@ -1,0 +1,32 @@
+{
+  "name": "@ytakahashi/enlint",
+  "version": "0.1.0",
+  "license": "MIT",
+  "exports": {
+    ".": "./cli/main.ts"
+  },
+  "imports": {
+    "#core/": "./core/",
+    "#infra/": "./infra/",
+    "@std/assert": "jsr:@std/assert@^1",
+    "@std/cli": "jsr:@std/cli@^1",
+    "ai": "npm:ai@7.0.107"
+  },
+  "publish": {
+    "exclude": [
+      "**/*_test.ts",
+      "**/_fixtures/",
+      "desktop/",
+      "tests/",
+      "tools/"
+    ]
+  },
+  "tasks": {
+    "fmt": "deno fmt",
+    "fmt:check": "deno fmt --check",
+    "check": "deno check .",
+    "lint": "deno lint",
+    "test": "deno test --allow-read --ignore=tests/",
+    "test:live": "deno test --allow-all --permit-no-files tests/"
+  }
+}
