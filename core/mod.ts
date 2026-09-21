@@ -1,5 +1,14 @@
+export { adviseLintResult } from "./application/advise_lint_result.ts";
 export { lintMessage } from "./application/lint_message.ts";
 export type { LintMessageInput } from "./application/lint_message.ts";
+export type {
+  AdviceKind,
+  AdviceOutcome,
+  AdviceRequest,
+  Advisor,
+  IssueExplanation,
+  RewriteCandidate,
+} from "./domain/advisor.ts";
 export {
   CLASSIFICATION_DEFINITIONS,
   TONE_DEFINITION,
