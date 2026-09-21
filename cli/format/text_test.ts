@@ -1,4 +1,4 @@
-import { assertEquals, assertMatch } from "@std/assert";
+import { assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import type { LintResult } from "#core/domain/lint_result.ts";
 import { formatText } from "./text.ts";
 
@@ -39,7 +39,7 @@ const RESULT: LintResult = {
 
 Deno.test("formatText renders the stable human-readable layout", () => {
   assertEquals(
-    formatText(RESULT, { color: false }),
+    formatText(report(), { color: false }),
     `Score: 85/100
 
 Naturalness   82/100
@@ -60,7 +60,7 @@ Status: Ready to send
 
 Deno.test("formatText states when no issues were found", () => {
   assertMatch(
-    formatText({ ...RESULT, issues: [] }, { color: false }),
+    formatText(report({ ...RESULT, issues: [] }), { color: false }),
     /Issues\nNone\n/,
   );
 });
@@ -74,35 +74,107 @@ Deno.test("formatText maps every status and only colors when enabled", () => {
 
   for (const [status, label] of Object.entries(labels)) {
     const plain = formatText(
-      { ...RESULT, status: status as LintResult["status"] },
+      report({ ...RESULT, status: status as LintResult["status"] }),
       { color: false },
     );
     assertMatch(plain, new RegExp(`Status: ${label}$`, "m"));
     assertEquals(plain.includes("\u001b["), false);
   }
 
-  assertEquals(formatText(RESULT, { color: true }).includes("\u001b["), true);
+  assertEquals(
+    formatText(report(), { color: true }).includes("\u001b["),
+    true,
+  );
 });
 
 Deno.test("formatText marks only unusually low confidence", () => {
-  const output = formatText({
-    ...RESULT,
-    metrics: [
-      metric("naturalness", 82, 0.39),
-      metric("grammar", 94, 0.4),
-      metric("clarity", 90),
-      metric("contextFit", 73),
-    ],
-    classifications: [{
-      ...RESULT.classifications[0],
-      confidence: 0.39,
-    }],
-  }, { color: false });
+  const output = formatText(
+    report({
+      ...RESULT,
+      metrics: [
+        metric("naturalness", 82, 0.39),
+        metric("grammar", 94, 0.4),
+        metric("clarity", 90),
+        metric("contextFit", 73),
+      ],
+      classifications: [{
+        ...RESULT.classifications[0],
+        confidence: 0.39,
+      }],
+    }),
+    { color: false },
+  );
 
   assertMatch(output, /Naturalness\s+82\/100 {2}\(low confidence\)/);
   assertMatch(output, /Grammar\s+94\/100\n/);
   assertMatch(output, /Tone: slightly formal {2}\(low confidence\)/);
 });
+
+Deno.test("formatText places explanations under their indexed issues", () => {
+  const output = formatText({
+    lintResult: RESULT,
+    advice: {
+      kind: "explain",
+      outcome: {
+        explanations: [{
+          issueIndex: 1,
+          explanation: "Use a more direct phrase.\nAvoid unnecessary words.",
+        }],
+        candidates: [],
+      },
+    },
+  }, { color: false });
+
+  assertStringIncludes(
+    output,
+    `- context: low
+- wording: low
+  Explanation: Use a more direct phrase.
+               Avoid unnecessary words.`,
+  );
+  assertEquals(output.includes("Suggested rewrites"), false);
+});
+
+Deno.test("formatText renders rewrite candidates and their rationale", () => {
+  const output = formatText({
+    lintResult: RESULT,
+    advice: {
+      kind: "fix",
+      outcome: {
+        explanations: [],
+        candidates: [{
+          text: "Could you review this document\ntoday?",
+          rationale: "It names the object.\nIt remains concise.",
+        }],
+      },
+    },
+  }, { color: false });
+
+  assertStringIncludes(
+    output,
+    `Suggested rewrites
+1. Could you review this document
+   today?
+   Reason: It names the object.
+           It remains concise.`,
+  );
+});
+
+Deno.test("formatText states when no rewrite is suggested", () => {
+  const output = formatText({
+    lintResult: RESULT,
+    advice: {
+      kind: "both",
+      outcome: { explanations: [], candidates: [] },
+    },
+  }, { color: false });
+
+  assertMatch(output, /Suggested rewrites\nNone\n/);
+});
+
+function report(lintResult: LintResult = RESULT) {
+  return { lintResult, advice: undefined };
+}
 
 function metric(
   id: LintResult["metrics"][number]["id"],

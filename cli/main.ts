@@ -1,6 +1,7 @@
-#!/usr/bin/env -S deno run --allow-env=AI_GATEWAY_API_KEY,NO_COLOR --allow-net --allow-sys=hostname
+#!/usr/bin/env -S deno run --allow-env=AI_GATEWAY_API_KEY,OPENAI_API_KEY,NO_COLOR --allow-net --allow-sys=hostname
 
 import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";
+import { OpenAiAdvisor } from "#infra/llm/openai_advisor.ts";
 import { run } from "./run.ts";
 import { VERSION } from "./version.ts";
 
@@ -9,6 +10,7 @@ const encoder = new TextEncoder();
 if (import.meta.main) {
   Deno.exitCode = await run(Deno.args, {
     evaluator: new JevEvaluator(),
+    advisor: new OpenAiAdvisor(),
     stdin: {
       isTerminal: () => Deno.stdin.isTerminal(),
       readText: () => new Response(Deno.stdin.readable).text(),

@@ -1,6 +1,7 @@
 import { assertEquals } from "@std/assert";
 import type { LintResult } from "#core/domain/lint_result.ts";
 import { formatJson } from "./json.ts";
+import type { LintReport } from "./report.ts";
 
 const RESULT: LintResult = {
   text: "Could you review this today?",
@@ -48,9 +49,9 @@ const RESULT: LintResult = {
 };
 
 Deno.test("formatJson preserves evidence and normalizes missing values", () => {
-  const output = JSON.parse(formatJson(RESULT));
+  const output = JSON.parse(formatJson(report()));
 
-  assertEquals(output.version, 1);
+  assertEquals(output.version, 2);
   assertEquals(output.context, "work");
   assertEquals(output.metrics[1].confidence, null);
   assertEquals(output.metrics[1].probabilities, null);
@@ -61,10 +62,11 @@ Deno.test("formatJson preserves evidence and normalizes missing values", () => {
     totalTokens: 138,
   });
   assertEquals(output.issues, RESULT.issues);
+  assertEquals(output.advice, null);
 });
 
 Deno.test("formatJson orders probability keys by their definitions", () => {
-  const output = JSON.parse(formatJson(RESULT));
+  const output = JSON.parse(formatJson(report()));
 
   assertEquals(Object.keys(output.metrics[0].probabilities), [
     "0",
@@ -83,7 +85,30 @@ Deno.test("formatJson orders probability keys by their definitions", () => {
 });
 
 Deno.test("formatJson emits null when usage is unavailable", () => {
-  const output = JSON.parse(formatJson({ ...RESULT, usage: undefined }));
+  const output = JSON.parse(
+    formatJson(report({ ...RESULT, usage: undefined })),
+  );
   assertEquals(output.usage, null);
-  assertEquals(formatJson(RESULT).endsWith("\n"), true);
+  assertEquals(formatJson(report()).endsWith("\n"), true);
 });
+
+Deno.test("formatJson includes successful advice", () => {
+  const advice = {
+    explanations: [{ issueIndex: 0, explanation: "More context is needed." }],
+    candidates: [{
+      text: "Could you review this document today?",
+      rationale: "The object makes the request more specific.",
+    }],
+  };
+
+  const output = JSON.parse(formatJson({
+    lintResult: RESULT,
+    advice: { kind: "both", outcome: advice },
+  }));
+
+  assertEquals(output.advice, advice);
+});
+
+function report(lintResult: LintResult = RESULT): LintReport {
+  return { lintResult, advice: undefined };
+}

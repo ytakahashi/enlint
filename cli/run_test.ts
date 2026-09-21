@@ -1,5 +1,9 @@
 import { assertEquals, assertStringIncludes } from "@std/assert";
 import type { EvaluationOutcome } from "#core/domain/evaluator.ts";
+import {
+  FakeAdvisor,
+  type FakeAdvisorResponse,
+} from "#core/testing/fake_advisor.ts";
 import { FakeEvaluator } from "#core/testing/fake_evaluator.ts";
 import { run, type RunDependencies } from "./run.ts";
 
@@ -14,6 +18,7 @@ Deno.test("run evaluates a positional message and writes text output", async () 
   assertEquals(harness.stderr(), "");
   assertEquals(harness.evaluator.requests[0].text, "Review this.");
   assertEquals(harness.evaluator.requests[0].profile.id, "work");
+  assertEquals(harness.advisor.requests.length, 0);
   assertEquals(harness.stdinReads(), 0);
 });
 
@@ -25,8 +30,9 @@ Deno.test("run reads stdin and emits versioned JSON", async () => {
     0,
   );
   const output = JSON.parse(harness.stdout());
-  assertEquals(output.version, 1);
+  assertEquals(output.version, 2);
   assertEquals(output.text, "From stdin");
+  assertEquals(output.advice, null);
   assertEquals(harness.stdinReads(), 1);
 });
 
@@ -48,14 +54,72 @@ Deno.test("run applies min-score only when it is specified", async () => {
 });
 
 Deno.test("run handles help and version without input or credentials", async () => {
-  const help = createHarness(outcome(4), { credential: undefined });
+  const help = createHarness(outcome(4), {
+    credential: undefined,
+    openAiCredential: undefined,
+  });
   assertEquals(await run(["--help"], help.dependencies), 0);
   assertStringIncludes(help.stdout(), "Usage: enlint");
   assertEquals(help.evaluator.requests.length, 0);
+  assertEquals(help.advisor.requests.length, 0);
 
-  const version = createHarness(outcome(4), { credential: undefined });
+  const version = createHarness(outcome(4), {
+    credential: undefined,
+    openAiCredential: undefined,
+  });
   assertEquals(await run(["--version"], version.dependencies), 0);
   assertEquals(version.stdout(), "enlint 0.1.0\n");
+});
+
+Deno.test("run maps advice flags and combines both in one request", async () => {
+  const cases = [
+    { args: ["--explain"], kind: "explain" },
+    { args: ["--fix"], kind: "fix" },
+    { args: ["--explain", "--fix"], kind: "both" },
+  ] as const;
+
+  for (const { args, kind } of cases) {
+    const harness = createHarness(outcome(3.2));
+
+    assertEquals(await run([...args, "Message"], harness.dependencies), 0);
+    assertEquals(harness.advisor.requests.length, 1);
+    assertEquals(harness.advisor.requests[0].kind, kind);
+    assertEquals(harness.advisor.requests[0].lintResult.text, "Message");
+    assertEquals(harness.advisor.requests[0].profile.id, "general");
+  }
+});
+
+Deno.test("run includes successful advice in JSON", async () => {
+  const advice = {
+    explanations: [],
+    candidates: [{ text: "Rewritten message.", rationale: "It is clearer." }],
+  };
+  const harness = createHarness(outcome(3.2), {
+    advisorResponse: { outcome: advice },
+  });
+
+  assertEquals(
+    await run(["--fix", "--output", "json", "Message"], harness.dependencies),
+    0,
+  );
+  assertEquals(JSON.parse(harness.stdout()).advice, advice);
+  assertEquals(harness.stderr(), "");
+});
+
+Deno.test("run keeps lint output and exit status when advice fails", async () => {
+  const failure = createHarness(outcome(3.2), {
+    advisorResponse: { error: new Error("advisor unavailable") },
+  });
+
+  assertEquals(
+    await run(
+      ["--fix", "--output", "json", "--min-score", "80.1", "Message"],
+      failure.dependencies,
+    ),
+    1,
+  );
+  assertEquals(JSON.parse(failure.stdout()).advice, null);
+  assertStringIncludes(failure.stderr(), "Advice failed: advisor unavailable");
 });
 
 Deno.test("run sends usage and input failures only to stderr", async () => {
@@ -87,6 +151,24 @@ Deno.test("run reports unknown contexts and missing credentials before evaluatio
   assertEquals(credential.stdout(), "");
   assertStringIncludes(credential.stderr(), "AI_GATEWAY_API_KEY");
   assertEquals(credential.evaluator.requests.length, 0);
+
+  const adviceCredential = createHarness(outcome(4), {
+    openAiCredential: undefined,
+  });
+  assertEquals(
+    await run(["--explain", "Message"], adviceCredential.dependencies),
+    2,
+  );
+  assertEquals(adviceCredential.stdout(), "");
+  assertStringIncludes(adviceCredential.stderr(), "OPENAI_API_KEY");
+  assertEquals(adviceCredential.evaluator.requests.length, 0);
+  assertEquals(adviceCredential.advisor.requests.length, 0);
+
+  const unusedAdviceCredential = createHarness(outcome(4), {
+    openAiCredential: undefined,
+  });
+  assertEquals(await run(["Message"], unusedAdviceCredential.dependencies), 0);
+  assertEquals(unusedAdviceCredential.evaluator.requests.length, 1);
 });
 
 Deno.test("run leaves stdout empty when evaluation fails", async () => {
@@ -135,7 +217,9 @@ type HarnessOptions = {
   readonly stdinTerminal?: boolean;
   readonly stdoutTerminal?: boolean;
   readonly credential?: string | undefined;
+  readonly openAiCredential?: string | undefined;
   readonly noColorEnvironment?: string;
+  readonly advisorResponse?: FakeAdvisorResponse;
 };
 
 function createHarness(
@@ -146,11 +230,20 @@ function createHarness(
   let stderr = "";
   let stdinReads = 0;
   const evaluator = new FakeEvaluator(evaluationOutcome);
+  const advisor = new FakeAdvisor(
+    options.advisorResponse ?? {
+      outcome: { explanations: [], candidates: [] },
+    },
+  );
   const credential = Object.hasOwn(options, "credential")
     ? options.credential
     : "test-key";
+  const openAiCredential = Object.hasOwn(options, "openAiCredential")
+    ? options.openAiCredential
+    : "test-openai-key";
   const dependencies: RunDependencies = {
     evaluator,
+    advisor,
     stdin: {
       isTerminal: () => options.stdinTerminal ?? false,
       readText: () => {
@@ -173,6 +266,7 @@ function createHarness(
     },
     getEnv: (name) => {
       if (name === "AI_GATEWAY_API_KEY") return credential;
+      if (name === "OPENAI_API_KEY") return openAiCredential;
       if (name === "NO_COLOR") return options.noColorEnvironment;
       return undefined;
     },
@@ -182,6 +276,7 @@ function createHarness(
   return {
     dependencies,
     evaluator,
+    advisor,
     stdout: () => stdout,
     stderr: () => stderr,
     stdinReads: () => stdinReads,

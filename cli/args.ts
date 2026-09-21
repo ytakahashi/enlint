@@ -12,6 +12,8 @@ export type CliCommand =
     readonly contextId: string;
     readonly output: OutputFormat;
     readonly minScore: number | undefined;
+    readonly explain: boolean;
+    readonly fix: boolean;
     readonly noColor: boolean;
   };
 
@@ -23,6 +25,8 @@ Options:
   --context <id>       Evaluation context (default: general)
   --output <text|json> Output format (default: text)
   --min-score <0-100>  Exit 1 when the overall score is below this value
+  --explain            Explain each issue using an LLM
+  --fix                Suggest rewrites using an LLM
   --no-color           Disable colored output
   --help               Show this help
   --version            Show the version`;
@@ -30,7 +34,7 @@ Options:
 export function parseArgs(args: readonly string[]): CliCommand {
   const parsed = parseStdArgs(args, {
     string: ["context", "output", "min-score"],
-    boolean: ["no-color", "help", "version"],
+    boolean: ["explain", "fix", "no-color", "help", "version"],
     default: {
       context: "general",
       output: "text",
@@ -71,6 +75,8 @@ export function parseArgs(args: readonly string[]): CliCommand {
     contextId: requireNonEmptyOption(parsed.context, "--context"),
     output,
     minScore: parseMinScore(parsed["min-score"]),
+    explain: parsed.explain,
+    fix: parsed.fix,
     noColor: parsed["no-color"],
   };
 }

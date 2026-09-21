@@ -1,12 +1,13 @@
 import {
   type EvaluationUsage,
   JUDGEMENT_DEFINITIONS,
-  type LintResult,
   METRIC_DEFINITIONS,
   TONE_DEFINITION,
 } from "#core/mod.ts";
+import type { LintReport } from "./report.ts";
 
-export function formatJson(result: LintResult): string {
+export function formatJson(report: LintReport): string {
+  const result = report.lintResult;
   const metrics = METRIC_DEFINITIONS.map((definition) => {
     const metric = result.metrics.find(({ id }) => id === definition.id);
     if (metric === undefined) {
@@ -47,7 +48,7 @@ export function formatJson(result: LintResult): string {
   });
 
   const output = {
-    version: 1,
+    version: 2,
     text: result.text,
     context: result.contextId,
     overallScore: result.overallScore,
@@ -66,6 +67,7 @@ export function formatJson(result: LintResult): string {
     judgements,
     usage: formatUsage(result.usage),
     issues: result.issues,
+    advice: report.advice?.outcome ?? null,
   };
 
   return `${JSON.stringify(output, null, 2)}\n`;

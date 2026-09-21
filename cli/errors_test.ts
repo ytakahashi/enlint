@@ -1,5 +1,9 @@
 import { assertEquals } from "@std/assert";
-import { CliExecutionError, executionErrorMessage } from "./errors.ts";
+import {
+  adviceErrorMessage,
+  CliExecutionError,
+  executionErrorMessage,
+} from "./errors.ts";
 
 Deno.test("executionErrorMessage preserves deliberate CLI errors", () => {
   assertEquals(
@@ -41,5 +45,20 @@ Deno.test("executionErrorMessage handles cyclic causes", () => {
   assertEquals(
     executionErrorMessage(error),
     "Evaluation failed: gateway unavailable",
+  );
+});
+
+Deno.test("adviceErrorMessage distinguishes deliberate and provider failures", () => {
+  assertEquals(
+    adviceErrorMessage(new CliExecutionError("Set OPENAI_API_KEY.")),
+    "Set OPENAI_API_KEY.",
+  );
+  assertEquals(
+    adviceErrorMessage(new Error("provider unavailable")),
+    "Advice failed: provider unavailable",
+  );
+  assertEquals(
+    adviceErrorMessage("unknown"),
+    "Advice failed for an unknown reason.",
   );
 });

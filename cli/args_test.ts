@@ -9,6 +9,8 @@ Deno.test("parseArgs returns lint defaults and a single message", () => {
     contextId: "general",
     output: "text",
     minScore: undefined,
+    explain: false,
+    fix: false,
     noColor: false,
   });
 });
@@ -21,6 +23,8 @@ Deno.test("parseArgs validates and converts lint options", () => {
       "json",
       "--min-score",
       "82.5",
+      "--explain",
+      "--fix",
       "--no-color",
     ]),
     {
@@ -29,6 +33,8 @@ Deno.test("parseArgs validates and converts lint options", () => {
       contextId: "work",
       output: "json",
       minScore: 82.5,
+      explain: true,
+      fix: true,
       noColor: true,
     },
   );

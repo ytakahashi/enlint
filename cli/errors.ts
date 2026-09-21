@@ -39,6 +39,16 @@ export function executionErrorMessage(error: unknown): string {
     : "Evaluation failed for an unknown reason.";
 }
 
+export function adviceErrorMessage(error: unknown): string {
+  if (error instanceof CliExecutionError) {
+    return error.message;
+  }
+
+  return error instanceof Error
+    ? `Advice failed: ${error.message}`
+    : "Advice failed for an unknown reason.";
+}
+
 function hasStatusCode(error: unknown, expected: number): boolean {
   return statusCode(error) === expected;
 }
