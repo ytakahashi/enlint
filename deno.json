@@ -21,6 +21,11 @@
       "tools/"
     ]
   },
+  "lint": {
+    "plugins": [
+      "./tools/lint_plugin.ts"
+    ]
+  },
   "tasks": {
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
