@@ -26,12 +26,12 @@ function tone(value: ClassificationResult["value"]): ClassificationResult {
 
 Deno.test("deriveIssues applies score thresholds at their boundaries", () => {
   const cases = [
-    { score: 85, severity: undefined },
-    { score: 84.999, severity: "low" },
+    { score: 80, severity: undefined },
+    { score: 79.999, severity: "low" },
     { score: 70, severity: "low" },
     { score: 69.999, severity: "medium" },
-    { score: 50, severity: "medium" },
-    { score: 49.999, severity: "high" },
+    { score: 55, severity: "medium" },
+    { score: 54.999, severity: "high" },
   ] as const;
 
   for (const { score, severity } of cases) {
@@ -47,9 +47,9 @@ Deno.test("deriveIssues applies score thresholds at their boundaries", () => {
 Deno.test("deriveIssues maps metrics in input order", () => {
   const issues = deriveIssues(
     [
-      metric("naturalness", 84),
+      metric("naturalness", 79),
       metric("grammar", 69),
-      metric("clarity", 49),
+      metric("clarity", 54),
       metric("contextFit", 70),
     ],
     [],
@@ -71,7 +71,7 @@ Deno.test("deriveIssues maps metrics in input order", () => {
   );
   assertEquals(
     issues[0].detail,
-    'Metric "naturalness" scored 84, below the ready threshold of 85.',
+    'Metric "naturalness" scored 79, below the issue-free threshold of 80.',
   );
 });
 

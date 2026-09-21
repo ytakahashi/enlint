@@ -9,3 +9,6 @@
 # https://docs.deno.com/runtime/reference/cli/coverage/
 coverage/
 *.lcov
+
+# Resumable output from live golden corpus runs
+.enlint/

@@ -84,16 +84,37 @@ Deno.test("formatText maps every status and only colors when enabled", () => {
   assertEquals(formatText(RESULT, { color: true }).includes("\u001b["), true);
 });
 
+Deno.test("formatText marks only unusually low confidence", () => {
+  const output = formatText({
+    ...RESULT,
+    metrics: [
+      metric("naturalness", 82, 0.39),
+      metric("grammar", 94, 0.4),
+      metric("clarity", 90),
+      metric("contextFit", 73),
+    ],
+    classifications: [{
+      ...RESULT.classifications[0],
+      confidence: 0.39,
+    }],
+  }, { color: false });
+
+  assertMatch(output, /Naturalness\s+82\/100 {2}\(low confidence\)/);
+  assertMatch(output, /Grammar\s+94\/100\n/);
+  assertMatch(output, /Tone: slightly formal {2}\(low confidence\)/);
+});
+
 function metric(
   id: LintResult["metrics"][number]["id"],
   score: number,
+  confidence?: number,
 ): LintResult["metrics"][number] {
   return {
     id,
     score,
     rawLevel: score / 25,
     levelCount: 5,
-    confidence: undefined,
+    confidence,
     probabilities: undefined,
   };
 }

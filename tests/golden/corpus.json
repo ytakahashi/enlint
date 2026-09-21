@@ -1,0 +1,580 @@
+{
+  "version": 1,
+  "pairs": [
+    {
+      "id": "general-naturalness-01",
+      "context": "general",
+      "focus": "naturalness",
+      "split": "calibration",
+      "intent": "Ask the recipient to share their opinion.",
+      "better": {
+        "text": "Please let me know what you think.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Please inform me about what your thinking is.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "chat-naturalness-01",
+      "context": "chat",
+      "focus": "naturalness",
+      "split": "calibration",
+      "intent": "Say that the writer will arrive in ten minutes.",
+      "better": {
+        "text": "I'll be there in ten minutes.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      },
+      "worse": {
+        "text": "After ten minutes I will reach there.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "work-naturalness-01",
+      "context": "work",
+      "focus": "naturalness",
+      "split": "calibration",
+      "intent": "Promise to send an updated file during the afternoon.",
+      "better": {
+        "text": "I'll send the updated file this afternoon.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "I will perform the sending of the updated file this afternoon.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "email-naturalness-01",
+      "context": "email",
+      "focus": "naturalness",
+      "split": "validation",
+      "intent": "Thank the recipient for replying quickly.",
+      "better": {
+        "text": "Thank you for getting back to me so quickly.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Thank you for your quick returning answer to me.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "casual-naturalness-01",
+      "context": "casual",
+      "focus": "naturalness",
+      "split": "validation",
+      "intent": "Suggest meeting at the usual cafe.",
+      "better": {
+        "text": "Want to meet at our usual cafe?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["very casual", "casual"]
+        }
+      },
+      "worse": {
+        "text": "Do you want that we meet at the cafe which is usual for us?",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "chat-grammar-01",
+      "context": "chat",
+      "focus": "grammar",
+      "split": "calibration",
+      "intent": "Ask whether the recipient is free after lunch.",
+      "better": {
+        "text": "Are you free after lunch?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      },
+      "worse": {
+        "text": "Is you free after lunch?",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "work-grammar-01",
+      "context": "work",
+      "focus": "grammar",
+      "split": "calibration",
+      "intent": "State that the reports were sent yesterday.",
+      "better": {
+        "text": "The reports were sent yesterday.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral"]
+        }
+      },
+      "worse": {
+        "text": "The reports was send yesterday.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["neutral"]
+        }
+      }
+    },
+    {
+      "id": "email-grammar-01",
+      "context": "email",
+      "focus": "grammar",
+      "split": "calibration",
+      "intent": "Tell the recipient that the requested invoice is attached.",
+      "better": {
+        "text": "I have attached the invoice you requested.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "I has attach the invoice you requested.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "casual-grammar-01",
+      "context": "casual",
+      "focus": "grammar",
+      "split": "validation",
+      "intent": "Say that Mia does not like spicy food.",
+      "better": {
+        "text": "Mia doesn't like spicy food.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      },
+      "worse": {
+        "text": "Mia don't likes spicy food.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "general-grammar-01",
+      "context": "general",
+      "focus": "grammar",
+      "split": "validation",
+      "intent": "Explain that the event begins at nine.",
+      "better": {
+        "text": "The event begins at nine.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral"]
+        }
+      },
+      "worse": {
+        "text": "The event begin at nine.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["neutral"]
+        }
+      }
+    },
+    {
+      "id": "general-clarity-01",
+      "context": "general",
+      "focus": "clarity",
+      "split": "calibration",
+      "intent": "Ask for a signed form by Friday.",
+      "better": {
+        "text": "Please send the signed form by Friday.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Please send it by then.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "work-clarity-01",
+      "context": "work",
+      "focus": "clarity",
+      "split": "calibration",
+      "intent": "Ask Alex to approve the budget before Tuesday's meeting.",
+      "better": {
+        "text": "Alex, please approve the budget before Tuesday's meeting.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Please do that before the meeting next time.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "email-clarity-01",
+      "context": "email",
+      "focus": "clarity",
+      "split": "calibration",
+      "intent": "Reschedule a call from Monday to Wednesday at 2 p.m.",
+      "better": {
+        "text": "Could we move our Monday call to Wednesday at 2 p.m.?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Could we move it to the other day at the same sort of time?",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "chat-clarity-01",
+      "context": "chat",
+      "focus": "clarity",
+      "split": "validation",
+      "intent": "Tell the recipient which station exit to use.",
+      "better": {
+        "text": "Use the north exit at Central Station.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      },
+      "worse": {
+        "text": "Use that exit at the station.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "casual-clarity-01",
+      "context": "casual",
+      "focus": "clarity",
+      "split": "validation",
+      "intent": "Invite a friend to dinner at the writer's home on Saturday.",
+      "better": {
+        "text": "Want to come over for dinner on Saturday?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["very casual", "casual"]
+        }
+      },
+      "worse": {
+        "text": "Want to do that thing here sometime this weekend?",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["very casual", "casual"]
+        }
+      }
+    },
+    {
+      "id": "work-context-fit-01",
+      "context": "work",
+      "focus": "contextFit",
+      "split": "calibration",
+      "intent": "Ask a colleague to correct figures in a report.",
+      "better": {
+        "text": "Could you correct the figures in section three before we send the report?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Fix your numbers before this goes out.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "email-context-fit-01",
+      "context": "email",
+      "focus": "contextFit",
+      "split": "calibration",
+      "intent": "Ask a new client to confirm a delivery address.",
+      "better": {
+        "text": "Could you please confirm the delivery address for your order?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Hey, send me where you want this stuff dropped.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["very casual", "casual"]
+        }
+      }
+    },
+    {
+      "id": "casual-context-fit-01",
+      "context": "casual",
+      "focus": "contextFit",
+      "split": "calibration",
+      "intent": "Tell a close friend that the writer cannot attend tonight.",
+      "better": {
+        "text": "Sorry, I can't make it tonight. Can we catch up next week?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual"]
+        }
+      },
+      "worse": {
+        "text": "Please accept this formal notice of my nonattendance this evening.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["formal"]
+        }
+      }
+    },
+    {
+      "id": "chat-context-fit-01",
+      "context": "chat",
+      "focus": "contextFit",
+      "split": "validation",
+      "intent": "Ask whether the recipient can talk now.",
+      "better": {
+        "text": "Got a minute to talk?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["very casual", "casual"]
+        }
+      },
+      "worse": {
+        "text": "I hereby request your immediate availability for a verbal discussion.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["formal"]
+        }
+      }
+    },
+    {
+      "id": "general-context-fit-01",
+      "context": "general",
+      "focus": "contextFit",
+      "split": "validation",
+      "intent": "Ask an unspecified recipient to wait briefly.",
+      "better": {
+        "text": "Could you wait here for a moment?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Stay put, buddy.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["very casual", "casual"]
+        }
+      }
+    },
+    {
+      "id": "work-minor-wording-01",
+      "context": "work",
+      "focus": "naturalness",
+      "split": "calibration",
+      "intent": "Ask a colleague to review a proposal when convenient.",
+      "better": {
+        "text": "Could you review the proposal when you have a chance?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "Could you review the proposal when you have availability?",
+        "expected": {
+          "sendability": "improvable",
+          "focusSeverity": "low",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "email-minor-grammar-01",
+      "context": "email",
+      "focus": "grammar",
+      "split": "calibration",
+      "intent": "Say that the writer looks forward to meeting the recipient.",
+      "better": {
+        "text": "I look forward to meeting you next week.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "I look forward to meet you next week.",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "medium",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      }
+    },
+    {
+      "id": "chat-minor-clarity-01",
+      "context": "chat",
+      "focus": "clarity",
+      "split": "calibration",
+      "intent": "Say that the writer will call after leaving work.",
+      "better": {
+        "text": "I'll call you after I leave work.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      },
+      "worse": {
+        "text": "I'll call you after that.",
+        "expected": {
+          "sendability": "improvable",
+          "focusSeverity": "low",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "casual-severe-clarity-01",
+      "context": "casual",
+      "focus": "clarity",
+      "split": "calibration",
+      "intent": "Ask a friend to bring the blue bag from the car.",
+      "better": {
+        "text": "Can you bring the blue bag from the car?",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      },
+      "worse": {
+        "text": "Can you bring the thing from there?",
+        "expected": {
+          "sendability": "revise",
+          "focusSeverity": "high",
+          "acceptableTones": ["casual", "neutral"]
+        }
+      }
+    },
+    {
+      "id": "work-directness-boundary-01",
+      "context": "work",
+      "focus": "contextFit",
+      "split": "calibration",
+      "intent": "Remind a colleague to send notes before noon.",
+      "better": {
+        "text": "Please send the meeting notes before noon.",
+        "expected": {
+          "sendability": "ready",
+          "focusSeverity": "none",
+          "acceptableTones": ["neutral", "slightly formal"]
+        }
+      },
+      "worse": {
+        "text": "You need to send me the notes before noon.",
+        "expected": {
+          "sendability": "improvable",
+          "focusSeverity": "low",
+          "acceptableTones": ["neutral"]
+        }
+      }
+    }
+  ]
+}

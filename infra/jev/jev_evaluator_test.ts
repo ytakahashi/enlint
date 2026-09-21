@@ -1,4 +1,9 @@
-import { assertEquals, assertRejects, assertStrictEquals } from "@std/assert";
+import {
+  assertEquals,
+  assertRejects,
+  assertStrictEquals,
+  assertThrows,
+} from "@std/assert";
 import { CLASSIFICATION_DEFINITIONS } from "#core/domain/classification.ts";
 import { BUILT_IN_CONTEXT_PROFILES } from "#core/domain/context_profile.ts";
 import type { EvaluationRequest } from "#core/domain/evaluator.ts";
@@ -66,6 +71,30 @@ Deno.test("JevEvaluator preserves runner errors for presentation mapping", async
   const caught = await assertRejects(() => evaluator.evaluate(REQUEST));
 
   assertStrictEquals(caught, failure);
+});
+
+Deno.test("JevEvaluator allows batch callers to extend the deadline", async () => {
+  const calls: JevEvaluationOptions[] = [];
+  const response = await completeResponse();
+  const evaluator = new JevEvaluator({
+    runEvaluation: (options) => {
+      calls.push(options);
+      return Promise.resolve(response);
+    },
+    timeoutMs: 30_000,
+  });
+
+  await evaluator.evaluate(REQUEST);
+
+  assertEquals(calls[0].timeoutMs, 30_000);
+});
+
+Deno.test("JevEvaluator rejects invalid deadlines", () => {
+  assertThrows(
+    () => new JevEvaluator({ timeoutMs: 0 }),
+    RangeError,
+    "timeout must be a positive integer",
+  );
 });
 
 Deno.test("withRequestTimeout returns the value and stops the deadline", async () => {

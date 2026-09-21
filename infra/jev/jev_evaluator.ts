@@ -73,9 +73,19 @@ export const runJevEvaluation: JevEvaluationRunner = async (
 
 export class JevEvaluator implements Evaluator {
   readonly #runEvaluation: JevEvaluationRunner;
+  readonly #timeoutMs: number;
 
-  constructor(runEvaluation: JevEvaluationRunner = runJevEvaluation) {
-    this.#runEvaluation = runEvaluation;
+  constructor(options: JevEvaluatorOptions | JevEvaluationRunner = {}) {
+    const resolved = typeof options === "function"
+      ? { runEvaluation: options }
+      : options;
+    const timeoutMs = resolved.timeoutMs ?? REQUEST_TIMEOUT_MS;
+    if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
+      throw new RangeError("Jev evaluator timeout must be a positive integer");
+    }
+
+    this.#runEvaluation = resolved.runEvaluation ?? runJevEvaluation;
+    this.#timeoutMs = timeoutMs;
   }
 
   async evaluate(request: EvaluationRequest): Promise<EvaluationOutcome> {
@@ -85,9 +95,15 @@ export class JevEvaluator implements Evaluator {
       state: input.state,
       questions: input.questions,
       maxRetries: MAX_RETRIES,
-      timeoutMs: REQUEST_TIMEOUT_MS,
+      timeoutMs: this.#timeoutMs,
     });
 
     return mapJevResponse(request, response);
   }
 }
+
+export type JevEvaluatorOptions = {
+  readonly runEvaluation?: JevEvaluationRunner;
+  /** Per-request deadline. Batch tools may need longer than the CLI default. */
+  readonly timeoutMs?: number;
+};

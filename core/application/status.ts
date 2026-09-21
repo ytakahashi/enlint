@@ -1,7 +1,7 @@
 import type { Status } from "../domain/lint_result.ts";
 import {
   NEEDS_FIX_PROBABILITY_THRESHOLD,
-  READY_SCORE_THRESHOLD,
+  READY_STATUS_SCORE_THRESHOLD,
 } from "./_thresholds.ts";
 
 export function determineStatus(
@@ -26,7 +26,7 @@ export function determineStatus(
   if (needsFixProbability >= NEEDS_FIX_PROBABILITY_THRESHOLD) {
     return "needs-revision";
   }
-  if (overallScore >= READY_SCORE_THRESHOLD) {
+  if (overallScore >= READY_STATUS_SCORE_THRESHOLD) {
     return "ready";
   }
   return "improvable";

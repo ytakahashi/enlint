@@ -108,7 +108,7 @@ Deno.test("lintMessage composes a deterministic result through the evaluator por
   assertEquals(
     result.issues.map(({ category, severity }) => ({ category, severity })),
     [
-      { category: "grammar", severity: "medium" },
+      { category: "grammar", severity: "high" },
       { category: "tone", severity: "low" },
     ],
   );

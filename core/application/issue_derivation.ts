@@ -4,8 +4,8 @@ import type { Issue, IssueCategory, IssueSeverity } from "../domain/issue.ts";
 import type { MetricId, MetricResult } from "../domain/metric.ts";
 import {
   HIGH_ISSUE_SCORE_THRESHOLD,
+  ISSUE_FREE_SCORE_THRESHOLD,
   MEDIUM_ISSUE_SCORE_THRESHOLD,
-  READY_SCORE_THRESHOLD,
 } from "./_thresholds.ts";
 
 const METRIC_CATEGORIES = {
@@ -33,7 +33,7 @@ export function deriveIssues(
       severity,
       target: { kind: "message" },
       detail:
-        `Metric "${metric.id}" scored ${metric.score}, below the ready threshold of ${READY_SCORE_THRESHOLD}.`,
+        `Metric "${metric.id}" scored ${metric.score}, below the issue-free threshold of ${ISSUE_FREE_SCORE_THRESHOLD}.`,
     });
   }
 
@@ -55,7 +55,7 @@ function severityForScore(score: number): IssueSeverity | undefined {
   if (!Number.isFinite(score) || score < 0 || score > 100) {
     throw new RangeError("metric score must be a finite number from 0 to 100");
   }
-  if (score >= READY_SCORE_THRESHOLD) {
+  if (score >= ISSUE_FREE_SCORE_THRESHOLD) {
     return undefined;
   }
   if (score >= MEDIUM_ISSUE_SCORE_THRESHOLD) {

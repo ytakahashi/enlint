@@ -20,6 +20,10 @@ const METRIC_LABEL_WIDTH = Math.max(
   ...METRIC_DEFINITIONS.map(({ label }) => label.length),
 ) + 3;
 
+// Corpus p10 was 0.44 for metrics and 0.42 for tone. A lower cutoff keeps the
+// default output quiet while still surfacing unusually diffuse distributions.
+const LOW_CONFIDENCE_THRESHOLD = 0.4;
+
 export function formatText(
   result: LintResult,
   options: TextFormatOptions,
@@ -29,7 +33,9 @@ export function formatText(
     if (metric === undefined) {
       throw new TypeError(`missing result for metric "${definition.id}"`);
     }
-    return `${definition.label.padEnd(METRIC_LABEL_WIDTH)}${metric.score}/100`;
+    return `${definition.label.padEnd(METRIC_LABEL_WIDTH)}${metric.score}/100${
+      lowConfidenceSuffix(metric.confidence)
+    }`;
   });
   const tone = result.classifications.find(({ id }) => id === "tone");
   if (tone === undefined) {
@@ -52,7 +58,7 @@ export function formatText(
     "",
     ...metrics,
     "",
-    `Tone: ${tone.value}`,
+    `Tone: ${tone.value}${lowConfidenceSuffix(tone.confidence)}`,
     "",
     style("Issues", 1, options.color),
     ...issueLines,
@@ -60,6 +66,12 @@ export function formatText(
     `Status: ${status}`,
     "",
   ].join("\n");
+}
+
+function lowConfidenceSuffix(confidence: number | undefined): string {
+  return confidence !== undefined && confidence < LOW_CONFIDENCE_THRESHOLD
+    ? "  (low confidence)"
+    : "";
 }
 
 function style(text: string, code: number, enabled: boolean): string {

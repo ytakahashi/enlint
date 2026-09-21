@@ -33,6 +33,8 @@
     "check": "deno check .",
     "lint": "deno lint",
     "test": "deno test --allow-read --ignore=tests/",
+    "test:golden": "deno test --allow-read --allow-env=AI_GATEWAY_API_KEY,ENLINT_GOLDEN_REPEATS,ENLINT_GOLDEN_CONCURRENCY,ENLINT_GOLDEN_TIMEOUT_MS,ENLINT_GOLDEN_INTERVAL_MS --allow-net --allow-sys=hostname tests/golden_test.ts",
+    "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=AI_GATEWAY_API_KEY,ENLINT_GOLDEN_REPEATS,ENLINT_GOLDEN_CONCURRENCY,ENLINT_GOLDEN_TIMEOUT_MS,ENLINT_GOLDEN_INTERVAL_MS --allow-net --allow-sys=hostname tools/golden/run.ts",
     "test:live": "deno test --allow-all --permit-no-files tests/"
   }
 }
