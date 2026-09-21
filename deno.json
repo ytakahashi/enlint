@@ -10,7 +10,7 @@
     "#infra/": "./infra/",
     "@std/assert": "jsr:@std/assert@^1",
     "@std/cli": "jsr:@std/cli@^1",
-    "ai": "npm:ai@7.0.107",
+    "@typesafe-ai/sdk": "npm:@typesafe-ai/sdk@0.6.0",
     "openai": "npm:openai@7.20.0"
   },
   "publish": {
@@ -33,11 +33,11 @@
     "fmt:check": "deno fmt --check",
     "check": "deno check .",
     "lint": "deno lint",
-    "cli": "deno run --allow-env=AI_GATEWAY_API_KEY,VERCEL_*,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net --allow-sys=hostname cli/main.ts",
+    "cli": "deno run --allow-env=TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net=api.typesafe.ai,api.openai.com cli/main.ts",
     "test": "deno test --allow-read --ignore=tests/",
-    "test:golden": "deno test --allow-read --allow-env=ENLINT_GOLDEN_*,AI_GATEWAY_API_KEY,VERCEL_*,NODE_OPTIONS --allow-net --allow-sys=hostname tests/golden/",
-    "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=ENLINT_GOLDEN_*,AI_GATEWAY_API_KEY,VERCEL_*,NODE_OPTIONS --allow-net --allow-sys=hostname tools/golden/run.ts",
-    "test:live:jev": "deno test --allow-read --allow-env=AI_GATEWAY_API_KEY,VERCEL_*,NODE_OPTIONS --allow-net --allow-sys=hostname tests/jev_contract_live_test.ts",
+    "test:golden": "deno test --allow-read --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/golden/",
+    "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tools/golden/run.ts",
+    "test:live:jev": "deno test --allow-read --allow-env=TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/jev_contract_live_test.ts",
     "test:live:openai": "deno test --allow-read --allow-env=OPENAI_*,NODE_OPTIONS --allow-net tests/openai_contract_live_test.ts",
     "test:live": "deno task test:live:jev && deno task test:live:openai"
   }

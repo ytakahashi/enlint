@@ -3,6 +3,7 @@
     "naturalness": {
       "type": "score",
       "score": 3.28,
+      "confidence": 0.81,
       "probabilities": {
         "0": 0,
         "1": 0,
@@ -14,6 +15,7 @@
     "grammar": {
       "type": "score",
       "score": 3.76,
+      "confidence": 0.92,
       "probabilities": {
         "0": 0,
         "1": 0,
@@ -25,6 +27,7 @@
     "clarity": {
       "type": "score",
       "score": 3.6,
+      "confidence": 0.87,
       "probabilities": {
         "0": 0,
         "1": 0,
@@ -36,6 +39,7 @@
     "contextFit": {
       "type": "score",
       "score": 2.92,
+      "confidence": 0.76,
       "probabilities": {
         "0": 0,
         "1": 0,
@@ -47,6 +51,7 @@
     "tone": {
       "type": "choice",
       "choice": "slightly formal",
+      "confidence": 0.74,
       "probabilities": {
         "very casual": 0.01,
         "casual": 0.04,
@@ -56,28 +61,13 @@
       }
     },
     "needsFix": {
-      "type": "boolean",
-      "probability": 0.31
+      "type": "noul",
+      "noul": 0.31
     }
   },
-  "rounding": {
-    "probabilityDecimals": 2,
-    "scoreDecimals": 2
-  },
+  "model": "jev-latest",
   "usage": {
-    "inputTokens": 120,
-    "outputTokens": 18,
-    "totalTokens": 138
-  },
-  "providerMetadata": {
-    "typesafe": {
-      "confidence": {
-        "naturalness": 0.81,
-        "grammar": 0.92,
-        "clarity": 0.87,
-        "contextFit": 0.76,
-        "tone": 0.74
-      }
-    }
+    "input_tokens": 120,
+    "output_tokens": 18
   }
 }

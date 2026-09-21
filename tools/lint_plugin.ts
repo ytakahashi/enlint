@@ -15,7 +15,7 @@ const ALLOWED_LAYER_DEPENDENCIES: Readonly<
   desktop: new Set(["desktop", "infra", "core"]),
 };
 
-const AI_ADAPTER_PATH = "infra/jev/jev_evaluator.ts";
+const JEV_ADAPTER_PATH = "infra/jev/jev_evaluator.ts";
 const OPENAI_ADAPTER_PATH = "infra/llm/openai_advisor.ts";
 const DENO_NAMESPACE = "Deno";
 const CORE_NO_DENO_API_MESSAGE =
@@ -107,9 +107,8 @@ function violationOf(
   layer: ProductLayer,
   specifier: string,
 ): string | undefined {
-  // The AI SDK's evaluate API is experimental, so its blast radius is one file.
-  if (isAiSpecifier(specifier) && path !== AI_ADAPTER_PATH) {
-    return `ai may only be imported by ${AI_ADAPTER_PATH}`;
+  if (isTypeSafeSpecifier(specifier) && path !== JEV_ADAPTER_PATH) {
+    return `@typesafe-ai/sdk may only be imported by ${JEV_ADAPTER_PATH}`;
   }
   if (isOpenAiSpecifier(specifier) && path !== OPENAI_ADAPTER_PATH) {
     return `openai may only be imported by ${OPENAI_ADAPTER_PATH}`;
@@ -161,9 +160,10 @@ function resolveTargetPath(
     : "";
 }
 
-function isAiSpecifier(specifier: string): boolean {
-  return specifier === "ai" || specifier.startsWith("ai/") ||
-    /^npm:ai(?:@|\/|$)/.test(specifier);
+function isTypeSafeSpecifier(specifier: string): boolean {
+  return specifier === "@typesafe-ai/sdk" ||
+    specifier.startsWith("@typesafe-ai/sdk/") ||
+    /^npm:@typesafe-ai\/sdk(?:@|\/|$)/.test(specifier);
 }
 
 function isOpenAiSpecifier(specifier: string): boolean {

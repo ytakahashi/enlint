@@ -45,7 +45,7 @@ Deno.test("buildJevInput creates the shared state and all question types", () =>
     criteria: TONE_DEFINITION.choices,
   });
   assertEquals(input.questions.needsFix, {
-    type: "boolean",
+    type: "noul",
     instructions: JUDGEMENT_DEFINITIONS[0].instructions,
     criteria: JUDGEMENT_DEFINITIONS[0].criteria,
   });

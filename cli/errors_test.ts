@@ -1,5 +1,11 @@
 import { assertEquals } from "@std/assert";
 import {
+  JevAuthenticationError,
+  JevConnectionError,
+  JevRateLimitError,
+  JevRequestTimeoutError,
+} from "#infra/jev/jev_evaluator.ts";
+import {
   OpenAiAuthenticationError,
   OpenAiConnectionError,
   OpenAiRateLimitError,
@@ -18,36 +24,28 @@ Deno.test("executionErrorMessage preserves deliberate CLI errors", () => {
   );
 });
 
-Deno.test("executionErrorMessage maps service status codes through causes", () => {
+Deno.test("executionErrorMessage maps classified Jev failures", () => {
+  const cause = new Error("SDK failure");
   assertEquals(
-    executionErrorMessage(new Error("request", { cause: { statusCode: 401 } })),
-    "Authentication failed. Check AI_GATEWAY_API_KEY.",
+    executionErrorMessage(new JevAuthenticationError(cause)),
+    "Authentication failed. Check TYPESAFE_API_KEY.",
   );
   assertEquals(
-    executionErrorMessage(new Error("request", { cause: { status: 503 } })),
+    executionErrorMessage(new JevRateLimitError(cause)),
     "The evaluation service is temporarily unavailable after retrying.",
   );
-});
-
-Deno.test("executionErrorMessage maps timeout and network failures", () => {
-  const timeout = new Error("deadline");
-  timeout.name = "JevRequestTimeoutError";
   assertEquals(
-    executionErrorMessage(timeout),
+    executionErrorMessage(new JevRequestTimeoutError("deadline")),
     "The evaluation service did not respond in time.",
   );
   assertEquals(
-    executionErrorMessage(
-      new Error("request", { cause: { code: "ENETUNREACH" } }),
-    ),
+    executionErrorMessage(new JevConnectionError(cause)),
     "Unable to reach the evaluation service. Check the network connection.",
   );
 });
 
-Deno.test("executionErrorMessage handles cyclic causes", () => {
+Deno.test("executionErrorMessage preserves unknown errors", () => {
   const error = new Error("gateway unavailable");
-  Object.defineProperty(error, "cause", { value: error });
-
   assertEquals(
     executionErrorMessage(error),
     "Evaluation failed: gateway unavailable",

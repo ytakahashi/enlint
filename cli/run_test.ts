@@ -192,7 +192,7 @@ Deno.test("run reports unknown contexts and missing credentials before evaluatio
   const credential = createHarness(outcome(4), { credential: undefined });
   assertEquals(await run(["Message"], credential.dependencies), 2);
   assertEquals(credential.stdout(), "");
-  assertStringIncludes(credential.stderr(), "AI_GATEWAY_API_KEY");
+  assertStringIncludes(credential.stderr(), "TYPESAFE_API_KEY");
   assertEquals(credential.evaluator.requests.length, 0);
 
   const adviceCredential = createHarness(outcome(4), {
@@ -308,7 +308,7 @@ function createHarness(
       },
     },
     getEnv: (name) => {
-      if (name === "AI_GATEWAY_API_KEY") return credential;
+      if (name === "TYPESAFE_API_KEY") return credential;
       if (name === "OPENAI_API_KEY") return openAiCredential;
       if (name === "NO_COLOR") return options.noColorEnvironment;
       return undefined;

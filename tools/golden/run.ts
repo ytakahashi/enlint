@@ -2,12 +2,15 @@ import {
   BUILT_IN_CONTEXT_PROFILES,
   CLASSIFICATION_DEFINITIONS,
   JUDGEMENT_DEFINITIONS,
+  lintMessage,
   METRIC_DEFINITIONS,
   type MetricId,
 } from "#core/mod.ts";
 import {
+  JEV_MODEL_ID,
   JevEvaluator,
   JevRequestTimeoutError,
+  runJevEvaluation,
 } from "#infra/jev/jev_evaluator.ts";
 import { analyzeGoldenCorpus, confidenceDistributions } from "./analysis.ts";
 import {
@@ -27,6 +30,7 @@ import {
 } from "./tuning.ts";
 import { loadGoldenCorpus } from "./corpus.ts";
 import { evaluateGoldenCorpus } from "./evaluate.ts";
+import { guardJevModel, JevModelChangedError } from "./model_guard.ts";
 
 const DEFAULT_REPEATS = 3;
 const DEFAULT_CONCURRENCY = 4;
@@ -47,7 +51,7 @@ if (import.meta.main) {
 }
 
 async function main(): Promise<void> {
-  requireGatewayCredential();
+  const apiKey = requireTypeSafeCredential();
   const corpus = await loadGoldenCorpus();
   const repeats = readPositiveIntegerEnv(
     "ENLINT_GOLDEN_REPEATS",
@@ -65,9 +69,13 @@ async function main(): Promise<void> {
     "ENLINT_GOLDEN_INTERVAL_MS",
     DEFAULT_START_INTERVAL_MS,
   );
+  const resolvedModel = await probeResolvedModel(apiKey, timeoutMs, corpus);
   const fingerprint = await fingerprintGoldenRun({
-    version: 1,
-    model: "typesafe-ai/jev",
+    version: 2,
+    model: {
+      requested: JEV_MODEL_ID,
+      resolved: resolvedModel,
+    },
     repeats,
     corpus,
     metricDefinitions: METRIC_DEFINITIONS,
@@ -88,7 +96,11 @@ async function main(): Promise<void> {
   let checkpointWrite = Promise.resolve();
   const observations = await evaluateGoldenCorpus(
     corpus,
-    new JevEvaluator({ timeoutMs }),
+    new JevEvaluator({
+      apiKey,
+      timeoutMs,
+      runEvaluation: guardJevModel(runJevEvaluation, resolvedModel),
+    }),
     {
       repeats,
       concurrency,
@@ -135,6 +147,9 @@ async function main(): Promise<void> {
     "validation",
   );
 
+  console.log(
+    `Jev model: requested=${JEV_MODEL_ID}, resolved=${resolvedModel}`,
+  );
   console.log(`Golden corpus: ${corpus.pairs.length} pairs x ${repeats} runs`);
   console.log(qualityLine("all", all));
   console.log(qualityLine("calibration", calibration));
@@ -195,6 +210,45 @@ async function main(): Promise<void> {
   console.log(`Tone confidence: ${formatDistribution(confidence.tone)}`);
 }
 
+async function probeResolvedModel(
+  apiKey: string,
+  timeoutMs: number,
+  corpus: Awaited<ReturnType<typeof loadGoldenCorpus>>,
+): Promise<string> {
+  const pair = corpus.pairs[0];
+  if (pair === undefined) {
+    throw new TypeError("golden corpus must contain at least one pair");
+  }
+
+  // Probe through the use case the run itself uses. Building a second request
+  // here would resolve the alias for questions the corpus never sends once a
+  // context profile overrides the metric definitions.
+  let resolved: string | undefined;
+  const evaluator = new JevEvaluator({
+    apiKey,
+    timeoutMs,
+    runEvaluation: async (options) => {
+      const response = await runJevEvaluation(options);
+      resolved = response.model;
+      return response;
+    },
+  });
+  await lintMessage(
+    {
+      text: pair.better.text,
+      profile: BUILT_IN_CONTEXT_PROFILES[pair.context],
+    },
+    evaluator,
+  );
+
+  // The fingerprint and the run guard both key on this value, so an unobserved
+  // probe must fail loudly rather than pass an empty model along.
+  if (resolved === undefined) {
+    throw new TypeError("the Jev probe did not observe a response");
+  }
+  return resolved;
+}
+
 function qualityLine(
   label: string,
   analysis: ReturnType<typeof analyzeGoldenCorpus>,
@@ -231,10 +285,12 @@ function signed(value: number): string {
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}`;
 }
 
-function requireGatewayCredential(): void {
-  if (!(Deno.env.get("AI_GATEWAY_API_KEY") ?? "").trim()) {
-    throw new Error("set AI_GATEWAY_API_KEY before running the golden corpus");
+function requireTypeSafeCredential(): string {
+  const apiKey = Deno.env.get("TYPESAFE_API_KEY") ?? "";
+  if (!apiKey.trim()) {
+    throw new Error("set TYPESAFE_API_KEY before running the golden corpus");
   }
+  return apiKey;
 }
 
 function readPositiveIntegerEnv(name: string, fallback: number): number {
@@ -265,6 +321,10 @@ function errorMessage(error: unknown): string {
   if (error instanceof JevRequestTimeoutError) {
     return `${error.message}. Increase ENLINT_GOLDEN_TIMEOUT_MS or reduce ` +
       "ENLINT_GOLDEN_CONCURRENCY; the next run will resume from its checkpoint.";
+  }
+  if (error instanceof JevModelChangedError) {
+    return `${error.message}. The checkpoint belongs to the previous model, ` +
+      "so the next run re-resolves the alias and starts the corpus over.";
   }
   return error instanceof Error ? error.message : String(error);
 }

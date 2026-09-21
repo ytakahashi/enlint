@@ -11,8 +11,13 @@ import { JUDGEMENT_DEFINITIONS } from "#core/domain/judgement.ts";
 import { METRIC_DEFINITIONS } from "#core/domain/metric.ts";
 import type { JevEvaluationOptions, JevEvaluationResponse } from "./_types.ts";
 import {
+  classifyJevError,
+  JevAuthenticationError,
+  JevConnectionError,
   JevEvaluator,
+  JevRateLimitError,
   JevRequestTimeoutError,
+  JevTimeoutError,
   withRequestTimeout,
 } from "./jev_evaluator.ts";
 
@@ -34,15 +39,19 @@ async function completeResponse(): Promise<JevEvaluationResponse> {
 Deno.test("JevEvaluator sends configured SDK input and maps the response", async () => {
   const calls: JevEvaluationOptions[] = [];
   const response = await completeResponse();
-  const evaluator = new JevEvaluator((options) => {
-    calls.push(options);
-    return Promise.resolve(response);
+  const evaluator = new JevEvaluator({
+    apiKey: "test-key",
+    runEvaluation: (options) => {
+      calls.push(options);
+      return Promise.resolve(response);
+    },
   });
 
   const outcome = await evaluator.evaluate(REQUEST);
 
   assertEquals(calls.length, 1);
-  assertEquals(calls[0].model, "typesafe-ai/jev");
+  assertEquals(calls[0].apiKey, "test-key");
+  assertEquals(calls[0].model, "jev-latest");
   assertEquals(calls[0].maxRetries, 2);
   assertEquals(calls[0].timeoutMs, 5_000);
   assertEquals(
@@ -66,7 +75,10 @@ Deno.test("JevEvaluator sends configured SDK input and maps the response", async
 
 Deno.test("JevEvaluator preserves runner errors for presentation mapping", async () => {
   const failure = new Error("gateway unavailable");
-  const evaluator = new JevEvaluator(() => Promise.reject(failure));
+  const evaluator = new JevEvaluator({
+    apiKey: "test-key",
+    runEvaluation: () => Promise.reject(failure),
+  });
 
   const caught = await assertRejects(() => evaluator.evaluate(REQUEST));
 
@@ -77,6 +89,7 @@ Deno.test("JevEvaluator allows batch callers to extend the deadline", async () =
   const calls: JevEvaluationOptions[] = [];
   const response = await completeResponse();
   const evaluator = new JevEvaluator({
+    apiKey: "test-key",
     runEvaluation: (options) => {
       calls.push(options);
       return Promise.resolve(response);
@@ -91,7 +104,7 @@ Deno.test("JevEvaluator allows batch callers to extend the deadline", async () =
 
 Deno.test("JevEvaluator rejects invalid deadlines", () => {
   assertThrows(
-    () => new JevEvaluator({ timeoutMs: 0 }),
+    () => new JevEvaluator({ apiKey: "test-key", timeoutMs: 0 }),
     RangeError,
     "timeout must be a positive integer",
   );
@@ -130,4 +143,20 @@ Deno.test("withRequestTimeout preserves failures that are not the deadline", asy
   );
 
   assertStrictEquals(caught, failure);
+});
+
+Deno.test("classifyJevError classifies adapter errors without SDK types", () => {
+  const cause = new Error("SDK failure");
+  const cases = [
+    [new JevAuthenticationError(cause), "authentication"],
+    [new JevRateLimitError(cause), "rate-limit"],
+    [new JevTimeoutError(cause), "timeout"],
+    [new JevRequestTimeoutError("deadline"), "timeout"],
+    [new JevConnectionError(cause), "connection"],
+  ] as const;
+
+  for (const [error, kind] of cases) {
+    assertEquals(classifyJevError(error), kind);
+  }
+  assertEquals(classifyJevError(new Error("unrelated")), undefined);
 });

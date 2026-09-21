@@ -1,0 +1,43 @@
+{
+  "answers": {
+    "naturalness": {
+      "type": "score",
+      "score": 0,
+      "confidence": 1,
+      "probabilities": { "0": 1, "1": 0, "2": 0, "3": 0, "4": 0 }
+    },
+    "grammar": {
+      "type": "score",
+      "score": 4,
+      "confidence": 1,
+      "probabilities": { "0": 0, "1": 0, "2": 0, "3": 0, "4": 1 }
+    },
+    "clarity": {
+      "type": "score",
+      "score": 4,
+      "confidence": 1,
+      "probabilities": { "0": 0, "1": 0, "2": 0, "3": 0, "4": 1 }
+    },
+    "contextFit": {
+      "type": "score",
+      "score": 4,
+      "confidence": 1,
+      "probabilities": { "0": 0, "1": 0, "2": 0, "3": 0, "4": 1 }
+    },
+    "tone": {
+      "type": "choice",
+      "choice": "neutral",
+      "confidence": 1,
+      "probabilities": {
+        "very casual": 0,
+        "casual": 0,
+        "neutral": 1,
+        "slightly formal": 0,
+        "formal": 0
+      }
+    },
+    "needsFix": { "type": "noul", "noul": 0 }
+  },
+  "model": "jev-latest",
+  "usage": { "input_tokens": 0, "output_tokens": 0 }
+}

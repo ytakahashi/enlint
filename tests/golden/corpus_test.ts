@@ -1,8 +1,9 @@
 import { assertEquals } from "@std/assert";
-import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";
+import { JevEvaluator, runJevEvaluation } from "#infra/jev/jev_evaluator.ts";
 import { analyzeGoldenCorpus } from "../../tools/golden/analysis.ts";
 import { loadGoldenCorpus } from "../../tools/golden/corpus.ts";
 import { evaluateGoldenCorpus } from "../../tools/golden/evaluate.ts";
+import { guardJevModel } from "../../tools/golden/model_guard.ts";
 
 const DEFAULT_REPEATS = 3;
 const DEFAULT_CONCURRENCY = 4;
@@ -10,7 +11,7 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_START_INTERVAL_MS = 2_100;
 
 Deno.test("better golden messages outrank worse messages", async () => {
-  requireGatewayCredential();
+  const apiKey = requireTypeSafeCredential();
   const completeCorpus = await loadGoldenCorpus();
   const corpus = {
     ...completeCorpus,
@@ -19,10 +20,15 @@ Deno.test("better golden messages outrank worse messages", async () => {
   const observations = await evaluateGoldenCorpus(
     corpus,
     new JevEvaluator({
+      apiKey,
       timeoutMs: readPositiveIntegerEnv(
         "ENLINT_GOLDEN_TIMEOUT_MS",
         DEFAULT_TIMEOUT_MS,
       ),
+      // The gate keeps no state between runs, so it adopts the model of its
+      // first response instead of spending a probe request. A failure then
+      // distinguishes a quality regression from a model swap mid-run.
+      runEvaluation: guardJevModel(runJevEvaluation),
     }),
     {
       repeats: readPositiveIntegerEnv(
@@ -62,10 +68,12 @@ Deno.test("better golden messages outrank worse messages", async () => {
   );
 });
 
-function requireGatewayCredential(): void {
-  if (!(Deno.env.get("AI_GATEWAY_API_KEY") ?? "").trim()) {
-    throw new Error("set AI_GATEWAY_API_KEY before running golden tests");
+function requireTypeSafeCredential(): string {
+  const apiKey = Deno.env.get("TYPESAFE_API_KEY") ?? "";
+  if (!apiKey.trim()) {
+    throw new Error("set TYPESAFE_API_KEY before running golden tests");
   }
+  return apiKey;
 }
 
 function readPositiveIntegerEnv(name: string, fallback: number): number {

@@ -10,7 +10,7 @@ export type JevQuestion =
     readonly criteria: Readonly<Record<string, string>>;
   }
   | {
-    readonly type: "boolean";
+    readonly type: "noul";
     readonly instructions: string;
     readonly criteria: {
       readonly true: string;
@@ -22,16 +22,18 @@ export type JevAnswer =
   | {
     readonly type: "score";
     readonly score: number;
-    readonly probabilities?: Readonly<Record<string, number>>;
+    readonly confidence: number;
+    readonly probabilities: Readonly<Record<string, number>>;
   }
   | {
     readonly type: "choice";
     readonly choice: string;
-    readonly probabilities?: Readonly<Record<string, number>>;
+    readonly confidence: number;
+    readonly probabilities: Readonly<Record<string, number>>;
   }
   | {
-    readonly type: "boolean";
-    readonly probability: number;
+    readonly type: "noul";
+    readonly noul: number;
   };
 
 export type JevEvaluationInput = {
@@ -41,19 +43,15 @@ export type JevEvaluationInput = {
 
 export type JevEvaluationResponse = {
   readonly answers: Readonly<Record<string, JevAnswer>>;
-  readonly rounding?: {
-    readonly probabilityDecimals?: number;
-    readonly scoreDecimals?: number;
+  readonly model: string;
+  readonly usage: {
+    readonly input_tokens: number;
+    readonly output_tokens: number;
   };
-  readonly usage?: {
-    readonly inputTokens?: number;
-    readonly outputTokens?: number;
-    readonly totalTokens?: number;
-  };
-  readonly providerMetadata?: Readonly<Record<string, unknown>>;
 };
 
 export type JevEvaluationOptions = JevEvaluationInput & {
+  readonly apiKey: string;
   readonly model: string;
   readonly maxRetries: number;
   /** Wall-clock deadline for the whole call, retries included. */

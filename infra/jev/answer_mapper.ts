@@ -10,7 +10,11 @@ import type {
 import type { JudgementId } from "#core/domain/judgement.ts";
 import type { MetricId } from "#core/domain/metric.ts";
 
-const PROBABILITY_TOLERANCE = 1e-6;
+// The live contract test verifies that probabilities and scores use a
+// two-decimal grid. The API does not expose that precision as metadata, so
+// aggregate checks account for half a unit of error per contributing value.
+const RESPONSE_VALUE_ROUNDING_ERROR = 0.005;
+const PROBABILITY_COMPARISON_TOLERANCE = 1e-6;
 
 export class InvalidJevResponseError extends Error {
   override readonly name = "InvalidJevResponseError";
@@ -20,14 +24,10 @@ export function mapJevResponse(
   request: EvaluationRequest,
   response: unknown,
 ): EvaluationOutcome {
-  if (!isRecord(response)) {
+  if (!isRecord(response) || !isRecord(response.answers)) {
     throw invalid("response must contain an answer map");
   }
   const answers = response.answers;
-  if (!isRecord(answers)) {
-    throw invalid("response must contain an answer map");
-  }
-
   const expectedIds = [
     ...request.metrics.map(({ id }) => id),
     ...request.classifications.map(({ id }) => id),
@@ -42,13 +42,6 @@ export function mapJevResponse(
     );
   }
 
-  const rounding = mapRounding(response.rounding);
-  // Jev reports confidence as how concentrated a probability distribution is,
-  // so it is returned for score and choice answers but never for boolean ones.
-  const confidences = extractConfidences(response.providerMetadata, [
-    ...request.metrics.map(({ id }) => id),
-    ...request.classifications.map(({ id }) => id),
-  ]);
   const metrics = Object.fromEntries(
     request.metrics.map((definition) => [
       definition.id,
@@ -56,9 +49,6 @@ export function mapJevResponse(
         answers[definition.id],
         definition.id,
         definition.levels.length,
-        confidences[definition.id],
-        rounding.probabilityError,
-        rounding.scoreError,
       ),
     ]),
   ) as Record<MetricId, RawScoreAnswer>;
@@ -69,19 +59,13 @@ export function mapJevResponse(
         answers[definition.id],
         definition.id,
         Object.keys(definition.choices),
-        confidences[definition.id],
-        rounding.probabilityError,
       ),
     ]),
   ) as Record<"tone", RawChoiceAnswer>;
   const judgements = Object.fromEntries(
     request.judgements.map((definition) => [
       definition.id,
-      mapBooleanAnswer(
-        answers[definition.id],
-        definition.id,
-        confidences[definition.id],
-      ),
+      mapNoulAnswer(answers[definition.id], definition.id),
     ]),
   ) as Record<JudgementId, RawBooleanAnswer>;
 
@@ -97,9 +81,6 @@ function mapScoreAnswer(
   value: unknown,
   id: string,
   levelCount: number,
-  confidence: number | undefined,
-  probabilityError: number,
-  scoreError: number,
 ): RawScoreAnswer {
   if (
     !isRecord(value) || value.type !== "score" ||
@@ -110,46 +91,29 @@ function mapScoreAnswer(
       `question "${id}" must contain a score from 0 to ${levelCount - 1}`,
     );
   }
-
+  const confidence = requiredProbability(value.confidence, id, "confidence");
   const keys = Array.from({ length: levelCount }, (_, index) => String(index));
-  const probabilities = mapDistribution(
-    value.probabilities,
-    keys,
-    id,
-    probabilityError,
+  const probabilities = mapDistribution(value.probabilities, keys, id);
+  const mean = Object.entries(probabilities).reduce(
+    (sum, [index, probability]) => sum + Number(index) * probability,
+    0,
   );
-  if (probabilities !== undefined) {
-    const mean = Object.entries(probabilities).reduce(
-      (sum, [index, probability]) => sum + Number(index) * probability,
-      0,
+  const meanTolerance = RESPONSE_VALUE_ROUNDING_ERROR + keys.reduce(
+    (total, index) => total + Number(index) * RESPONSE_VALUE_ROUNDING_ERROR,
+    0,
+  );
+  if (exceedsTolerance(Math.abs(mean - value.score), meanTolerance)) {
+    throw invalid(
+      `question "${id}" score must equal its probability-weighted mean`,
     );
-    const meanRoundingError = keys.reduce(
-      (sum, index) => sum + Number(index) * probabilityError,
-      0,
-    );
-    if (
-      Math.abs(mean - value.score) >
-        PROBABILITY_TOLERANCE + meanRoundingError + scoreError
-    ) {
-      throw invalid(
-        `question "${id}" score must equal its probability-weighted mean`,
-      );
-    }
   }
-
-  return {
-    rawLevel: value.score,
-    confidence,
-    probabilities,
-  };
+  return { rawLevel: value.score, confidence, probabilities };
 }
 
 function mapChoiceAnswer(
   value: unknown,
   id: string,
   choices: readonly string[],
-  confidence: number | undefined,
-  probabilityError: number,
 ): RawChoiceAnswer {
   if (
     !isRecord(value) || value.type !== "choice" ||
@@ -157,59 +121,35 @@ function mapChoiceAnswer(
   ) {
     throw invalid(`question "${id}" must select a defined choice`);
   }
-
-  const probabilities = mapDistribution(
-    value.probabilities,
-    choices,
-    id,
-    probabilityError,
-  );
-  if (probabilities !== undefined) {
-    const selected = probabilities[value.choice];
-    if (
-      Object.values(probabilities).some((probability) =>
-        probability > selected + PROBABILITY_TOLERANCE
-      )
-    ) {
-      throw invalid(
-        `question "${id}" must select a highest-probability choice`,
-      );
-    }
+  const confidence = requiredProbability(value.confidence, id, "confidence");
+  const probabilities = mapDistribution(value.probabilities, choices, id);
+  const selected = probabilities[value.choice];
+  if (
+    Object.values(probabilities).some((probability) =>
+      probability > selected + PROBABILITY_COMPARISON_TOLERANCE
+    )
+  ) {
+    throw invalid(`question "${id}" must select a highest-probability choice`);
   }
-
   return {
     value: value.choice as ToneValue,
     confidence,
-    probabilities: probabilities as
-      | Readonly<Record<ToneValue, number>>
-      | undefined,
+    probabilities: probabilities as Readonly<Record<ToneValue, number>>,
   };
 }
 
-function mapBooleanAnswer(
-  value: unknown,
-  id: string,
-  confidence: number | undefined,
-): RawBooleanAnswer {
-  if (
-    !isRecord(value) || value.type !== "boolean" ||
-    !isProbability(value.probability)
-  ) {
+function mapNoulAnswer(value: unknown, id: string): RawBooleanAnswer {
+  if (!isRecord(value) || value.type !== "noul" || !isProbability(value.noul)) {
     throw invalid(`question "${id}" must contain P(true) from 0 to 1`);
   }
-
-  return { probability: value.probability, confidence };
+  return { probability: value.noul, confidence: undefined };
 }
 
 function mapDistribution(
   value: unknown,
   keys: readonly string[],
   id: string,
-  probabilityError: number,
-): Readonly<Record<string, number>> | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
+): Readonly<Record<string, number>> {
   if (
     !isRecord(value) || !hasExactKeys(value, keys) ||
     !Object.values(value).every(isProbability)
@@ -218,114 +158,43 @@ function mapDistribution(
       `question "${id}" probabilities must cover every defined outcome`,
     );
   }
-
   const probabilities = value as Record<string, number>;
   const total = Object.values(probabilities).reduce(
     (sum, probability) => sum + probability,
     0,
   );
-  if (
-    Math.abs(total - 1) >
-      PROBABILITY_TOLERANCE + keys.length * probabilityError
-  ) {
+  const sumTolerance = keys.length * RESPONSE_VALUE_ROUNDING_ERROR;
+  if (exceedsTolerance(Math.abs(total - 1), sumTolerance)) {
     throw invalid(`question "${id}" probabilities must sum to 1`);
   }
   return probabilities;
 }
 
-function mapRounding(value: unknown): {
-  probabilityError: number;
-  scoreError: number;
-} {
-  if (value === undefined) {
-    return { probabilityError: 0, scoreError: 0 };
+function requiredProbability(
+  value: unknown,
+  id: string,
+  name: string,
+): number {
+  if (!isProbability(value)) {
+    throw invalid(`question "${id}" ${name} must be from 0 to 1`);
   }
-  if (!isRecord(value)) {
-    throw invalid("rounding must be an object");
-  }
-  return {
-    probabilityError: roundingError(
-      value.probabilityDecimals,
-      "probabilityDecimals",
-    ),
-    scoreError: roundingError(value.scoreDecimals, "scoreDecimals"),
-  };
+  return value;
 }
 
-function roundingError(value: unknown, name: string): number {
-  if (value === undefined) {
-    return 0;
-  }
-  // IEEE-754 values beyond 15 decimal places cannot provide a meaningful
-  // validation tolerance, so reject them at the adapter boundary.
-  if (
-    !Number.isInteger(value) || (value as number) < 0 || (value as number) > 15
-  ) {
-    throw invalid(`rounding.${name} must be an integer from 0 to 15`);
-  }
-  return 0.5 * 10 ** -(value as number);
-}
-
-function extractConfidences(
-  providerMetadata: unknown,
-  /** Score and choice question IDs only; boolean answers carry no confidence. */
-  questionIds: readonly string[],
-): Readonly<Record<string, number | undefined>> {
-  if (providerMetadata === undefined) {
-    return {};
-  }
-  if (!isRecord(providerMetadata)) {
-    throw invalid("provider metadata must be an object");
-  }
-
-  const typesafe = providerMetadata.typesafe;
-  if (typesafe === undefined) {
-    return {};
-  }
-  if (!isRecord(typesafe)) {
-    throw invalid("typesafe provider metadata must be an object");
-  }
-
-  const confidence = typesafe.confidence;
-  if (confidence === undefined) {
-    return {};
-  }
-  if (
-    !isRecord(confidence) || !hasExactKeys(confidence, questionIds) ||
-    !Object.values(confidence).every(isProbability)
-  ) {
-    throw invalid(
-      "typesafe confidence must contain a probability for every score and choice question",
-    );
-  }
-
-  return confidence as Record<string, number>;
-}
-
-function mapUsage(value: unknown): EvaluationUsage | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
+function mapUsage(value: unknown): EvaluationUsage {
   if (!isRecord(value)) {
     throw invalid("usage must be an object");
   }
-
-  const inputTokens = tokenCount(value.inputTokens, "inputTokens");
-  const outputTokens = tokenCount(value.outputTokens, "outputTokens");
-  const totalTokens = tokenCount(value.totalTokens, "totalTokens");
-  if (
-    inputTokens === undefined && outputTokens === undefined &&
-    totalTokens === undefined
-  ) {
-    return undefined;
-  }
-  return { inputTokens, outputTokens, totalTokens };
+  const inputTokens = tokenCount(value.input_tokens, "input_tokens");
+  const outputTokens = tokenCount(value.output_tokens, "output_tokens");
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+  };
 }
 
-function tokenCount(value: unknown, name: string): number | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
+function tokenCount(value: unknown, name: string): number {
   if (!Number.isInteger(value) || (value as number) < 0) {
     throw invalid(`usage.${name} must be a non-negative integer`);
   }
@@ -342,6 +211,10 @@ function isFiniteNumber(value: unknown): value is number {
 
 function isProbability(value: unknown): value is number {
   return isFiniteNumber(value) && value >= 0 && value <= 1;
+}
+
+function exceedsTolerance(difference: number, tolerance: number): boolean {
+  return difference - tolerance > Number.EPSILON * 10;
 }
 
 function hasExactKeys(

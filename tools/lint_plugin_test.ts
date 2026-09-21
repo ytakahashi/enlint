@@ -35,14 +35,17 @@ Deno.test("layer-dependencies limits external dependencies from core", () => {
   assertEquals(lint("cli/main.ts", ['import { p } from "@std/cli";']), []);
 });
 
-Deno.test("layer-dependencies isolates the ai dependency", () => {
-  const message = "ai may only be imported by infra/jev/jev_evaluator.ts";
-  const importAi = ['import { experimental_evaluate } from "ai";'];
+Deno.test("layer-dependencies isolates the TypeSafe dependency", () => {
+  const message =
+    "@typesafe-ai/sdk may only be imported by infra/jev/jev_evaluator.ts";
+  const importSdk = ['import { TypeSafeClient } from "@typesafe-ai/sdk";'];
 
-  assertEquals(lint("infra/jev/jev_evaluator.ts", importAi), []);
-  assertEquals(lint("infra/jev/question_builder.ts", importAi), [message]);
+  assertEquals(lint("infra/jev/jev_evaluator.ts", importSdk), []);
+  assertEquals(lint("infra/jev/question_builder.ts", importSdk), [message]);
   assertEquals(
-    lint("cli/main.ts", ['import type { M } from "npm:ai@7.0.107";']),
+    lint("cli/main.ts", [
+      'import type { Questions } from "npm:@typesafe-ai/sdk@0.6.0";',
+    ]),
     [message],
   );
 });

@@ -136,10 +136,10 @@ function requestedAdviceKind(
 function requireCredentials(
   getEnv: (name: string) => string | undefined,
 ): void {
-  const apiKey = getEnv("AI_GATEWAY_API_KEY");
+  const apiKey = getEnv("TYPESAFE_API_KEY");
   if (apiKey === undefined || apiKey.trim().length === 0) {
     throw new CliExecutionError(
-      "Set AI_GATEWAY_API_KEY before running an evaluation.",
+      "Set TYPESAFE_API_KEY before running an evaluation.",
     );
   }
 }

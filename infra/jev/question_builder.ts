@@ -22,7 +22,7 @@ export function buildJevInput(
   }
   for (const judgement of request.judgements) {
     addQuestion(questions, judgement.id, {
-      type: "boolean",
+      type: "noul",
       instructions: judgement.instructions,
       criteria: judgement.criteria,
     });

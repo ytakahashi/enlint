@@ -1,4 +1,4 @@
-import { assertEquals, assertStrictEquals, assertThrows } from "@std/assert";
+import { assertEquals, assertThrows } from "@std/assert";
 import { CLASSIFICATION_DEFINITIONS } from "#core/domain/classification.ts";
 import { BUILT_IN_CONTEXT_PROFILES } from "#core/domain/context_profile.ts";
 import type { EvaluationRequest } from "#core/domain/evaluator.ts";
@@ -8,9 +8,8 @@ import { InvalidJevResponseError, mapJevResponse } from "./answer_mapper.ts";
 
 type MutableFixture = {
   answers: Record<string, Record<string, unknown>>;
-  rounding?: Record<string, unknown>;
+  model?: unknown;
   usage?: Record<string, unknown>;
-  providerMetadata?: Record<string, unknown>;
 };
 
 const REQUEST: EvaluationRequest = {
@@ -21,17 +20,17 @@ const REQUEST: EvaluationRequest = {
   judgements: JUDGEMENT_DEFINITIONS,
 };
 
-async function fixture(name: string): Promise<MutableFixture> {
+async function fixture(
+  name = "complete_response.json",
+): Promise<MutableFixture> {
   const text = await Deno.readTextFile(
     new URL(`./_fixtures/${name}`, import.meta.url),
   );
   return JSON.parse(text) as MutableFixture;
 }
 
-Deno.test("mapJevResponse preserves complete answers, confidence, and usage", async () => {
-  const response = await fixture("complete_response.json");
-
-  const outcome = mapJevResponse(REQUEST, response);
+Deno.test("mapJevResponse preserves required evidence and derives token totals", async () => {
+  const outcome = mapJevResponse(REQUEST, await fixture());
 
   assertEquals(outcome.metrics.naturalness, {
     rawLevel: 3.28,
@@ -49,7 +48,6 @@ Deno.test("mapJevResponse preserves complete answers, confidence, and usage", as
       formal: 0.1,
     },
   });
-  // Jev returns no confidence for boolean answers.
   assertEquals(outcome.judgements.needsFix, {
     probability: 0.31,
     confidence: undefined,
@@ -61,55 +59,46 @@ Deno.test("mapJevResponse preserves complete answers, confidence, and usage", as
   });
 });
 
-Deno.test("mapJevResponse accepts omitted optional evidence", async () => {
-  const response = await fixture("minimal_response.json");
+Deno.test("mapJevResponse accepts valid response boundary values", async () => {
+  const outcome = mapJevResponse(
+    REQUEST,
+    await fixture("boundary_response.json"),
+  );
 
-  const outcome = mapJevResponse(REQUEST, response);
-
-  assertEquals(outcome.metrics.grammar, {
-    rawLevel: 4,
-    confidence: undefined,
-    probabilities: undefined,
-  });
-  assertEquals(outcome.classifications.tone, {
-    value: "neutral",
-    confidence: undefined,
-    probabilities: undefined,
-  });
-  assertEquals(outcome.judgements.needsFix, {
-    probability: 0.1,
-    confidence: undefined,
-  });
-  assertEquals(outcome.usage, undefined);
+  assertEquals(outcome.metrics.naturalness.rawLevel, 0);
+  assertEquals(outcome.metrics.grammar.rawLevel, 4);
+  assertEquals(outcome.metrics.grammar.confidence, 1);
+  assertEquals(outcome.judgements.needsFix.probability, 0);
+  assertEquals(outcome.usage?.totalTokens, 0);
 });
 
-Deno.test("mapJevResponse honors declared rounding precision", async () => {
-  const response = await fixture("complete_response.json");
+Deno.test("mapJevResponse accepts aggregate two-decimal rounding error", async () => {
+  const response = await fixture();
+  response.answers.clarity.score = 3.05;
   response.answers.clarity.probabilities = {
     "0": 0,
     "1": 0,
     "2": 0,
-    "3": 0.4,
-    "4": 0.59,
+    "3": 1,
+    "4": 0,
+  };
+  response.answers.tone.probabilities = {
+    "very casual": 0,
+    casual: 0.09,
+    neutral: 0.3,
+    // Five rounded values allow a total error of exactly 5 * 0.005 = 0.025.
+    "slightly formal": 0.585,
+    formal: 0,
   };
 
   const outcome = mapJevResponse(REQUEST, response);
 
-  assertEquals(outcome.metrics.clarity.rawLevel, 3.6);
-
-  const badRounding = await fixture("complete_response.json");
-  if (badRounding.rounding !== undefined) {
-    badRounding.rounding.probabilityDecimals = 16;
-  }
-  assertThrows(
-    () => mapJevResponse(REQUEST, badRounding),
-    InvalidJevResponseError,
-    "rounding.probabilityDecimals must be an integer from 0 to 15",
-  );
+  assertEquals(outcome.metrics.clarity.rawLevel, 3.05);
+  assertEquals(outcome.classifications.tone.value, "slightly formal");
 });
 
 Deno.test("mapJevResponse rejects missing or mismatched answers", async () => {
-  const missing = await fixture("complete_response.json");
+  const missing = await fixture();
   delete missing.answers.grammar;
   assertThrows(
     () => mapJevResponse(REQUEST, missing),
@@ -117,7 +106,7 @@ Deno.test("mapJevResponse rejects missing or mismatched answers", async () => {
     "response must contain exactly one answer for every question",
   );
 
-  const wrongType = await fixture("complete_response.json");
+  const wrongType = await fixture();
   wrongType.answers.grammar.type = "choice";
   assertThrows(
     () => mapJevResponse(REQUEST, wrongType),
@@ -125,7 +114,7 @@ Deno.test("mapJevResponse rejects missing or mismatched answers", async () => {
     'question "grammar" must contain a score',
   );
 
-  const unknownChoice = await fixture("complete_response.json");
+  const unknownChoice = await fixture();
   unknownChoice.answers.tone.choice = "urgent";
   assertThrows(
     () => mapJevResponse(REQUEST, unknownChoice),
@@ -134,8 +123,28 @@ Deno.test("mapJevResponse rejects missing or mismatched answers", async () => {
   );
 });
 
-Deno.test("mapJevResponse rejects malformed evidence and metadata", async () => {
-  const badDistribution = await fixture("complete_response.json");
+Deno.test("mapJevResponse rejects missing required evidence", async () => {
+  for (const field of ["confidence", "probabilities"] as const) {
+    const score = await fixture();
+    delete score.answers.clarity[field];
+    assertThrows(
+      () => mapJevResponse(REQUEST, score),
+      InvalidJevResponseError,
+      `question "clarity" ${field}`,
+    );
+
+    const choice = await fixture();
+    delete choice.answers.tone[field];
+    assertThrows(
+      () => mapJevResponse(REQUEST, choice),
+      InvalidJevResponseError,
+      `question "tone" ${field}`,
+    );
+  }
+});
+
+Deno.test("mapJevResponse rejects malformed evidence and usage", async () => {
+  const badDistribution = await fixture();
   badDistribution.answers.clarity.probabilities = {
     "0": 0,
     "1": 0,
@@ -149,29 +158,19 @@ Deno.test("mapJevResponse rejects malformed evidence and metadata", async () => 
     'question "clarity" probabilities must sum to 1',
   );
 
-  const badConfidence = await fixture("complete_response.json");
-  const typesafe = badConfidence.providerMetadata?.typesafe as
-    | Record<string, unknown>
-    | undefined;
-  const confidence = typesafe?.confidence as
-    | Record<string, unknown>
-    | undefined;
-  assertStrictEquals(confidence !== undefined, true);
-  delete confidence?.tone;
+  const badMean = await fixture();
+  badMean.answers.clarity.score = 3.8;
   assertThrows(
-    () => mapJevResponse(REQUEST, badConfidence),
+    () => mapJevResponse(REQUEST, badMean),
     InvalidJevResponseError,
-    "typesafe confidence must contain a probability for every score and choice question",
+    "score must equal its probability-weighted mean",
   );
 
-  const booleanConfidence = await fixture("complete_response.json");
-  const booleanTypesafe = booleanConfidence.providerMetadata?.typesafe as
-    | Record<string, Record<string, unknown>>
-    | undefined;
-  booleanTypesafe!.confidence.needsFix = 0.82;
+  const badUsage = await fixture();
+  delete badUsage.usage?.output_tokens;
   assertThrows(
-    () => mapJevResponse(REQUEST, booleanConfidence),
+    () => mapJevResponse(REQUEST, badUsage),
     InvalidJevResponseError,
-    "typesafe confidence must contain a probability for every score and choice question",
+    "usage.output_tokens must be a non-negative integer",
   );
 });
