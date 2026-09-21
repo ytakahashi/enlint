@@ -14,7 +14,8 @@ const SYSTEM_INSTRUCTIONS = `You are an English writing advisor.
 The supplied lint result is authoritative: explain only the issues it lists, and never add, remove, or re-rank them.
 For each issue, say what in this message caused its category to be scored as the assessment reports, using the metric criteria supplied.
 Keep every explanation within the scope of its own category.
-When fixes are requested, rewrite the whole message, preserving the writer's meaning and the stated context.
+When fixes are requested, return rewrites that address the listed issues, preserving the writer's meaning and the stated context.
+Return no rewrite candidates when the lint result lists no issues; never restate the message as a candidate.
 Return only the structured response requested by the schema.`;
 
 export function buildOpenAiAdviceRequest(
@@ -23,9 +24,12 @@ export function buildOpenAiAdviceRequest(
   const explanationCount = includes(request.kind, "explain")
     ? request.lintResult.issues.length
     : 0;
-  const candidateLimit = includes(request.kind, "fix")
-    ? MAX_REWRITE_CANDIDATES
-    : 0;
+  // Nothing was flagged, so there is nothing to rewrite. Bounding the schema
+  // rather than only instructing the model keeps it from restating the message.
+  const candidateLimit =
+    includes(request.kind, "fix") && request.lintResult.issues.length > 0
+      ? MAX_REWRITE_CANDIDATES
+      : 0;
 
   const payload = {
     message: request.lintResult.text,

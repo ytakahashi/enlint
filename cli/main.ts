@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env=AI_GATEWAY_API_KEY,OPENAI_API_KEY,NO_COLOR --allow-net --allow-sys=hostname
+#!/usr/bin/env -S deno run --allow-env=AI_GATEWAY_API_KEY,VERCEL_*,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net --allow-sys=hostname
 
 import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";
 import { OpenAiAdvisor } from "#infra/llm/openai_advisor.ts";

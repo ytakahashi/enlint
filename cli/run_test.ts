@@ -5,6 +5,12 @@ import {
   type FakeAdvisorResponse,
 } from "#core/testing/fake_advisor.ts";
 import { FakeEvaluator } from "#core/testing/fake_evaluator.ts";
+import {
+  OpenAiAuthenticationError,
+  OpenAiConnectionError,
+  OpenAiRateLimitError,
+  OpenAiTimeoutError,
+} from "#infra/llm/openai_advisor.ts";
 import { run, type RunDependencies } from "./run.ts";
 
 Deno.test("run evaluates a positional message and writes text output", async () => {
@@ -94,7 +100,9 @@ Deno.test("run includes successful advice in JSON", async () => {
     explanations: [],
     candidates: [{ text: "Rewritten message.", rationale: "It is clearer." }],
   };
-  const harness = createHarness(outcome(3.2), {
+  // Rewrites only exist for a result that flagged something, so this scores
+  // below the issue-free threshold rather than at it.
+  const harness = createHarness(outcome(3), {
     advisorResponse: { outcome: advice },
   });
 
@@ -120,6 +128,41 @@ Deno.test("run keeps lint output and exit status when advice fails", async () =>
   );
   assertEquals(JSON.parse(failure.stdout()).advice, null);
   assertStringIncludes(failure.stderr(), "Advice failed: advisor unavailable");
+});
+
+Deno.test("run reports classified advice failures without discarding lint output", async () => {
+  const cause = new Error("SDK failure");
+  const cases = [
+    {
+      error: new OpenAiAuthenticationError(cause),
+      message: "OpenAI authentication failed. Check OPENAI_API_KEY.",
+    },
+    {
+      error: new OpenAiRateLimitError(cause),
+      message: "The advice service is temporarily unavailable after retrying.",
+    },
+    {
+      error: new OpenAiTimeoutError(cause),
+      message: "The advice service did not respond in time.",
+    },
+    {
+      error: new OpenAiConnectionError(cause),
+      message:
+        "Unable to reach the advice service. Check the network connection.",
+    },
+  ] as const;
+
+  for (const { error, message } of cases) {
+    const harness = createHarness(outcome(4), {
+      advisorResponse: { error },
+    });
+
+    assertEquals(await run(["--explain", "Message"], harness.dependencies), 0);
+    assertStringIncludes(harness.stdout(), "Score: 100/100");
+    assertEquals(harness.stderr(), `enlint: ${message}\n`);
+    assertEquals(harness.evaluator.requests.length, 1);
+    assertEquals(harness.advisor.requests.length, 1);
+  }
 });
 
 Deno.test("run sends usage and input failures only to stderr", async () => {

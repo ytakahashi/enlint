@@ -1,5 +1,11 @@
 import { assertEquals } from "@std/assert";
 import {
+  OpenAiAuthenticationError,
+  OpenAiConnectionError,
+  OpenAiRateLimitError,
+  OpenAiTimeoutError,
+} from "#infra/llm/openai_advisor.ts";
+import {
   adviceErrorMessage,
   CliExecutionError,
   executionErrorMessage,
@@ -61,4 +67,31 @@ Deno.test("adviceErrorMessage distinguishes deliberate and provider failures", (
     adviceErrorMessage("unknown"),
     "Advice failed for an unknown reason.",
   );
+});
+
+Deno.test("adviceErrorMessage maps classified OpenAI failures", () => {
+  const cause = new Error("SDK failure");
+  const cases = [
+    {
+      error: new OpenAiAuthenticationError(cause),
+      message: "OpenAI authentication failed. Check OPENAI_API_KEY.",
+    },
+    {
+      error: new OpenAiRateLimitError(cause),
+      message: "The advice service is temporarily unavailable after retrying.",
+    },
+    {
+      error: new OpenAiTimeoutError(cause),
+      message: "The advice service did not respond in time.",
+    },
+    {
+      error: new OpenAiConnectionError(cause),
+      message:
+        "Unable to reach the advice service. Check the network connection.",
+    },
+  ] as const;
+
+  for (const { error, message } of cases) {
+    assertEquals(adviceErrorMessage(error), message);
+  }
 });

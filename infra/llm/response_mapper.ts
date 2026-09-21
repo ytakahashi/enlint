@@ -31,7 +31,7 @@ export function mapOpenAiAdviceResponse(
 
   return {
     explanations: mapExplanations(value.explanations, request),
-    candidates: mapCandidates(value.candidates, request.kind),
+    candidates: mapCandidates(value.candidates, request),
   };
 }
 
@@ -76,13 +76,18 @@ function mapExplanations(
 
 function mapCandidates(
   value: unknown,
-  kind: AdviceKind,
+  request: AdviceRequest,
 ): readonly RewriteCandidate[] {
   if (!Array.isArray(value)) {
     throw invalid("candidates must be an array");
   }
 
-  const limit = includes(kind, "fix") ? MAX_REWRITE_CANDIDATES : 0;
+  // Mirrors the bound the prompt builder puts in the schema, so a response that
+  // ignored the schema is rejected here instead of reaching presentation.
+  const limit =
+    includes(request.kind, "fix") && request.lintResult.issues.length > 0
+      ? MAX_REWRITE_CANDIDATES
+      : 0;
   if (value.length > limit) {
     throw invalid(`response must contain at most ${limit} rewrite candidates`);
   }

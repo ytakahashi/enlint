@@ -29,9 +29,26 @@ deno task check
 deno task test
 ```
 
-Tests that call external APIs are kept separate:
+`deno task cli` runs the command against the real services, forwarding any
+arguments. It needs `AI_GATEWAY_API_KEY`, and `OPENAI_API_KEY` as well when
+advice is requested.
 
 ```bash
+deno task cli --help
+deno task cli --context work --explain --fix "Could you review this today?"
+echo "I'll check it later." | deno task cli --context chat --output json
+```
+
+The task exists so that the permission list does not have to be typed. It grants
+environment access by prefix (`VERCEL_*`, `OPENAI_*`) because both SDKs read
+several variables of their own, and an unquoted prefix on the command line is
+expanded by zsh before Deno sees it.
+
+Tests that call external APIs are kept separate, one task per provider:
+
+```bash
+deno task test:live:jev
+deno task test:live:openai
 deno task test:live
 ```
 

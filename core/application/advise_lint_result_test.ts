@@ -93,6 +93,32 @@ Deno.test("adviseLintResult accepts a fix request that needs no rewrite", async 
   );
 });
 
+Deno.test("adviseLintResult rejects rewrites for a result with no issues", async () => {
+  const lintResult = { ...LINT_RESULT, issues: [] };
+  const request = { lintResult, profile: PROFILE, kind: "fix" } as const;
+
+  await assertRejects(
+    () =>
+      adviseLintResult(
+        request,
+        new FakeAdvisor({
+          outcome: {
+            explanations: [],
+            candidates: [{ text: lintResult.text, rationale: "No change." }],
+          },
+        }),
+      ),
+    TypeError,
+    "advice contains rewrite candidates for a lint result with no issues",
+  );
+
+  const outcome = { explanations: [], candidates: [] } satisfies AdviceOutcome;
+  assertStrictEquals(
+    await adviseLintResult(request, new FakeAdvisor({ outcome })),
+    outcome,
+  );
+});
+
 Deno.test("adviseLintResult rejects explanation indexes outside the lint issues", async () => {
   // LINT_RESULT carries exactly one issue, so only index 0 is addressable.
   for (const issueIndex of [1, -1, 0.5, Number.NaN]) {

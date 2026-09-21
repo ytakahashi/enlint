@@ -165,3 +165,26 @@ Deno.test("mapOpenAiAdviceResponse rejects empty and excessive rewrite candidate
     "at most 3 rewrite candidates",
   );
 });
+
+Deno.test("mapOpenAiAdviceResponse rejects rewrites when nothing was flagged", () => {
+  const lintResult = { ...LINT_RESULT, issues: [] };
+  const candidates = [{ text: LINT_RESULT.text, rationale: "No change." }];
+
+  assertThrows(
+    () =>
+      mapOpenAiAdviceResponse(
+        { kind: "fix", lintResult, profile: PROFILE },
+        JSON.stringify({ explanations: [], candidates }),
+      ),
+    InvalidOpenAiAdviceResponseError,
+    "at most 0 rewrite candidates",
+  );
+
+  assertEquals(
+    mapOpenAiAdviceResponse(
+      { kind: "fix", lintResult, profile: PROFILE },
+      JSON.stringify({ explanations: [], candidates: [] }),
+    ).candidates,
+    [],
+  );
+});

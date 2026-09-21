@@ -25,8 +25,15 @@ only when fixes were requested. Those bounds come from the schema the prompt
 builder generates, so the test is what proves the provider honors it. Advice
 quality is judged in real use, not here.
 
-The Jev task needs `--allow-sys=hostname` and the Vercel deployment variables
-because the AI Gateway client reads them. The OpenAI task needs neither.
+Both SDKs read several environment variables of their own, so the tasks grant
+them by prefix (`VERCEL_*`, `OPENAI_*`) rather than by name. Listing each name
+breaks at runtime whenever an SDK release reads one more, while a prefix still
+keeps the grant scoped to that provider: `OPENAI_*` matches `OPENAI_BASE_URL`
+but not `OPENAIX_EVIL` or unrelated variables.
+
+The Jev task additionally needs `--allow-sys=hostname` and the `VERCEL_*`
+deployment variables because the AI Gateway client reads them. The OpenAI task
+needs neither; it reads only `OPENAI_*`.
 
 ## Golden corpus
 

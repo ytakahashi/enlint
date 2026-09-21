@@ -58,6 +58,13 @@ function validateOutcome(
       `advice contains rewrite candidates that "${request.kind}" did not request`,
     );
   }
+  // Advice addresses what the linter flagged. Without this an advisor can
+  // restate the message as a rewrite of a result that reported nothing.
+  if (issueCount === 0 && outcome.candidates.length > 0) {
+    throw new TypeError(
+      "advice contains rewrite candidates for a lint result with no issues",
+    );
+  }
 }
 
 /** An empty candidate list is valid, so only the unrequested side is checked. */

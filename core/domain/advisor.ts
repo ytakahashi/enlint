@@ -30,8 +30,10 @@ export type AdviceOutcome = {
   /** Empty when explanations were not requested; at most one per issue. */
   readonly explanations: readonly IssueExplanation[];
   /**
-   * Empty when fixes were not requested. Also empty when they were requested
-   * and the text needs no rewrite, so that an advisor never has to invent one.
+   * Empty when fixes were not requested, and empty when the lint result lists
+   * no issues: advice addresses what the linter flagged, so an advisor is never
+   * asked to invent a rewrite. May also be empty when issues exist but none of
+   * them is worth a rewrite.
    */
   readonly candidates: readonly RewriteCandidate[];
 };

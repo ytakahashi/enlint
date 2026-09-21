@@ -1,3 +1,5 @@
+import { classifyOpenAiError } from "#infra/llm/openai_advisor.ts";
+
 export class CliUsageError extends Error {
   override readonly name = "CliUsageError";
   readonly showHelp: boolean;
@@ -42,6 +44,17 @@ export function executionErrorMessage(error: unknown): string {
 export function adviceErrorMessage(error: unknown): string {
   if (error instanceof CliExecutionError) {
     return error.message;
+  }
+
+  switch (classifyOpenAiError(error)) {
+    case "authentication":
+      return "OpenAI authentication failed. Check OPENAI_API_KEY.";
+    case "rate-limit":
+      return "The advice service is temporarily unavailable after retrying.";
+    case "timeout":
+      return "The advice service did not respond in time.";
+    case "connection":
+      return "Unable to reach the advice service. Check the network connection.";
   }
 
   return error instanceof Error

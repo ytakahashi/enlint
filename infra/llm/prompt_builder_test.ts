@@ -147,6 +147,27 @@ Deno.test("buildOpenAiAdviceRequest constrains output to the requested kind", ()
   );
 });
 
+Deno.test("buildOpenAiAdviceRequest forbids rewrites when nothing was flagged", () => {
+  const lintResult = { ...LINT_RESULT, issues: [] };
+
+  // A message with no issues has nothing to rewrite, so the schema must not
+  // leave room for the model to restate it as a candidate.
+  for (const kind of ["fix", "both"] as const) {
+    const schema = buildOpenAiAdviceRequest(request(kind, lintResult))
+      .text.format.schema;
+    const properties = schema.properties as Record<
+      string,
+      Record<string, unknown>
+    >;
+    assertEquals(properties.candidates.maxItems, 0, kind);
+  }
+
+  assertEquals(
+    collectionSchemas("fix").candidates.maxItems,
+    MAX_REWRITE_CANDIDATES,
+  );
+});
+
 Deno.test("buildOpenAiAdviceRequest requires empty explanations when there are no issues", () => {
   const lintResult = { ...LINT_RESULT, issues: [] };
   const schema = buildOpenAiAdviceRequest(request("explain", lintResult))

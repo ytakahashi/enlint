@@ -33,11 +33,12 @@
     "fmt:check": "deno fmt --check",
     "check": "deno check .",
     "lint": "deno lint",
+    "cli": "deno run --allow-env=AI_GATEWAY_API_KEY,VERCEL_*,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net --allow-sys=hostname cli/main.ts",
     "test": "deno test --allow-read --ignore=tests/",
-    "test:golden": "deno test --allow-read --allow-env=AI_GATEWAY_API_KEY,ENLINT_GOLDEN_REPEATS,ENLINT_GOLDEN_CONCURRENCY,ENLINT_GOLDEN_TIMEOUT_MS,ENLINT_GOLDEN_INTERVAL_MS,VERCEL_OIDC_TOKEN,VERCEL_DEPLOYMENT_ID,VERCEL_ENV,VERCEL_PROJECT_ID,VERCEL_REGION,NODE_OPTIONS --allow-net --allow-sys=hostname tests/golden/",
-    "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=AI_GATEWAY_API_KEY,ENLINT_GOLDEN_REPEATS,ENLINT_GOLDEN_CONCURRENCY,ENLINT_GOLDEN_TIMEOUT_MS,ENLINT_GOLDEN_INTERVAL_MS,VERCEL_OIDC_TOKEN,VERCEL_DEPLOYMENT_ID,VERCEL_ENV,VERCEL_PROJECT_ID,VERCEL_REGION,NODE_OPTIONS --allow-net --allow-sys=hostname tools/golden/run.ts",
-    "test:live:jev": "deno test --allow-read --allow-env=AI_GATEWAY_API_KEY,VERCEL_OIDC_TOKEN,VERCEL_DEPLOYMENT_ID,VERCEL_ENV,VERCEL_PROJECT_ID,VERCEL_REGION,NODE_OPTIONS --allow-net --allow-sys=hostname tests/jev_contract_live_test.ts",
-    "test:live:openai": "deno test --allow-read --allow-env=OPENAI_API_KEY,NODE_OPTIONS --allow-net tests/openai_contract_live_test.ts",
+    "test:golden": "deno test --allow-read --allow-env=ENLINT_GOLDEN_*,AI_GATEWAY_API_KEY,VERCEL_*,NODE_OPTIONS --allow-net --allow-sys=hostname tests/golden/",
+    "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=ENLINT_GOLDEN_*,AI_GATEWAY_API_KEY,VERCEL_*,NODE_OPTIONS --allow-net --allow-sys=hostname tools/golden/run.ts",
+    "test:live:jev": "deno test --allow-read --allow-env=AI_GATEWAY_API_KEY,VERCEL_*,NODE_OPTIONS --allow-net --allow-sys=hostname tests/jev_contract_live_test.ts",
+    "test:live:openai": "deno test --allow-read --allow-env=OPENAI_*,NODE_OPTIONS --allow-net tests/openai_contract_live_test.ts",
     "test:live": "deno task test:live:jev && deno task test:live:openai"
   }
 }
