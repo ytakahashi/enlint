@@ -1,0 +1,11 @@
+{
+  "answers": {
+    "naturalness": { "type": "score", "score": 4 },
+    "grammar": { "type": "score", "score": 4 },
+    "clarity": { "type": "score", "score": 4 },
+    "contextFit": { "type": "score", "score": 4 },
+    "tone": { "type": "choice", "choice": "neutral" },
+    "needsFix": { "type": "boolean", "probability": 0.1 }
+  },
+  "usage": {}
+}

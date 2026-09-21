@@ -1,0 +1,83 @@
+{
+  "answers": {
+    "naturalness": {
+      "type": "score",
+      "score": 3.28,
+      "probabilities": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0.72,
+        "4": 0.28
+      }
+    },
+    "grammar": {
+      "type": "score",
+      "score": 3.76,
+      "probabilities": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0.24,
+        "4": 0.76
+      }
+    },
+    "clarity": {
+      "type": "score",
+      "score": 3.6,
+      "probabilities": {
+        "0": 0,
+        "1": 0,
+        "2": 0,
+        "3": 0.4,
+        "4": 0.6
+      }
+    },
+    "contextFit": {
+      "type": "score",
+      "score": 2.92,
+      "probabilities": {
+        "0": 0,
+        "1": 0,
+        "2": 0.2,
+        "3": 0.68,
+        "4": 0.12
+      }
+    },
+    "tone": {
+      "type": "choice",
+      "choice": "slightly formal",
+      "probabilities": {
+        "very casual": 0.01,
+        "casual": 0.04,
+        "neutral": 0.2,
+        "slightly formal": 0.65,
+        "formal": 0.1
+      }
+    },
+    "needsFix": {
+      "type": "boolean",
+      "probability": 0.31
+    }
+  },
+  "rounding": {
+    "probabilityDecimals": 2,
+    "scoreDecimals": 2
+  },
+  "usage": {
+    "inputTokens": 120,
+    "outputTokens": 18,
+    "totalTokens": 138
+  },
+  "providerMetadata": {
+    "typesafe": {
+      "confidence": {
+        "naturalness": 0.81,
+        "grammar": 0.92,
+        "clarity": 0.87,
+        "contextFit": 0.76,
+        "tone": 0.74
+      }
+    }
+  }
+}
