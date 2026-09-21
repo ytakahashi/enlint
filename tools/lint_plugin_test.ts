@@ -47,6 +47,29 @@ Deno.test("layer-dependencies isolates the ai dependency", () => {
   );
 });
 
+Deno.test("layer-dependencies isolates the openai dependency", () => {
+  const message = "openai may only be imported by infra/llm/openai_advisor.ts";
+
+  assertEquals(
+    lint("infra/llm/openai_advisor.ts", ['import OpenAI from "openai";']),
+    [],
+  );
+  assertEquals(
+    lint("infra/llm/prompt_builder.ts", [
+      'import type { Response } from "openai/resources/responses";',
+    ]),
+    [message],
+  );
+  assertEquals(
+    lint("cli/errors.ts", ['import OpenAI from "npm:openai@7.20.0";']),
+    [message],
+  );
+  assertEquals(
+    lint("infra/llm/client.ts", ['import value from "openai-compatible";']),
+    [],
+  );
+});
+
 Deno.test("core-no-deno-api reports Deno APIs used in core only", () => {
   assertEquals(
     lint("core/domain/entity.ts", [

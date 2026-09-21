@@ -1,8 +1,8 @@
 import { assertEquals } from "@std/assert";
 import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";
-import { analyzeGoldenCorpus } from "../tools/golden/analysis.ts";
-import { loadGoldenCorpus } from "../tools/golden/corpus.ts";
-import { evaluateGoldenCorpus } from "../tools/golden/evaluate.ts";
+import { analyzeGoldenCorpus } from "../../tools/golden/analysis.ts";
+import { loadGoldenCorpus } from "../../tools/golden/corpus.ts";
+import { evaluateGoldenCorpus } from "../../tools/golden/evaluate.ts";
 
 const DEFAULT_REPEATS = 3;
 const DEFAULT_CONCURRENCY = 4;

@@ -16,6 +16,7 @@ const ALLOWED_LAYER_DEPENDENCIES: Readonly<
 };
 
 const AI_ADAPTER_PATH = "infra/jev/jev_evaluator.ts";
+const OPENAI_ADAPTER_PATH = "infra/llm/openai_advisor.ts";
 const DENO_NAMESPACE = "Deno";
 const CORE_NO_DENO_API_MESSAGE =
   "core must not depend on Deno APIs; use Web standard APIs instead";
@@ -110,6 +111,9 @@ function violationOf(
   if (isAiSpecifier(specifier) && path !== AI_ADAPTER_PATH) {
     return `ai may only be imported by ${AI_ADAPTER_PATH}`;
   }
+  if (isOpenAiSpecifier(specifier) && path !== OPENAI_ADAPTER_PATH) {
+    return `openai may only be imported by ${OPENAI_ADAPTER_PATH}`;
+  }
 
   const target = resolveTargetPath(path, specifier);
   if (target === undefined) {
@@ -160,6 +164,11 @@ function resolveTargetPath(
 function isAiSpecifier(specifier: string): boolean {
   return specifier === "ai" || specifier.startsWith("ai/") ||
     /^npm:ai(?:@|\/|$)/.test(specifier);
+}
+
+function isOpenAiSpecifier(specifier: string): boolean {
+  return specifier === "openai" || specifier.startsWith("openai/") ||
+    /^npm:openai(?:@|\/|$)/.test(specifier);
 }
 
 function isStdAssertSpecifier(specifier: string): boolean {

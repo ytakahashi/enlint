@@ -1,0 +1,14 @@
+{
+  "explanations": [
+    {
+      "issueIndex": 0,
+      "explanation": "A third-person singular subject requires the verb form 'goes'."
+    }
+  ],
+  "candidates": [
+    {
+      "text": "She goes to work every day.",
+      "rationale": "This uses the correct third-person singular verb form."
+    }
+  ]
+}
