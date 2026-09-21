@@ -1,3 +1,5 @@
+export { lintMessage } from "./application/lint_message.ts";
+export type { LintMessageInput } from "./application/lint_message.ts";
 export {
   CLASSIFICATION_DEFINITIONS,
   TONE_DEFINITION,

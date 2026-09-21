@@ -16,6 +16,7 @@
     "exclude": [
       "**/*_test.ts",
       "**/_fixtures/",
+      "core/testing/",
       "desktop/",
       "tests/",
       "tools/"

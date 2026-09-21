@@ -1,4 +1,5 @@
 import type { ClassificationResult } from "./classification.ts";
+import type { EvaluationUsage } from "./evaluator.ts";
 import type { Issue } from "./issue.ts";
 import type { JudgementResult } from "./judgement.ts";
 import type { MetricResult } from "./metric.ts";
@@ -15,4 +16,5 @@ export type LintResult = {
   readonly judgements: readonly JudgementResult[];
   readonly issues: readonly Issue[];
   readonly status: Status;
+  readonly usage: EvaluationUsage | undefined;
 };
