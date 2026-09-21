@@ -74,4 +74,10 @@ Deno.test("core-no-deno-api reports Deno APIs used in core only", () => {
     lint("infra/config/loader.ts", ['export const h = Deno.env.get("HOME");']),
     [],
   );
+  assertEquals(
+    lint("core/domain/entity_test.ts", [
+      'Deno.test("core behavior", () => {});',
+    ]),
+    [],
+  );
 });

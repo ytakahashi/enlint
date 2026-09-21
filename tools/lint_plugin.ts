@@ -66,7 +66,10 @@ const plugin: Deno.lint.Plugin = {
 
     "core-no-deno-api": {
       create(context) {
-        if (getLayer(toRepositoryPath(context.filename)) !== "core") {
+        const path = toRepositoryPath(context.filename);
+        // Core tests are excluded from publishing and use Deno's test runner;
+        // the runtime-independent constraint applies to product modules.
+        if (getLayer(path) !== "core" || isTestModule(path)) {
           return {};
         }
 
