@@ -4,6 +4,33 @@ enlint is an English linter for reviewing messages. It scores writing and
 reports issues without immediately rewriting the original text, so you can
 improve it yourself and see how each change affects the result.
 
+## Installation
+
+```bash
+deno install -gf \
+  --allow-env=TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR \
+  --allow-net=api.typesafe.ai,api.openai.com \
+  jsr:@ytakahashi/enlint
+```
+
+`deno install` grants no permissions on its own, so the flags above are part of
+the command rather than of the package. They are the complete set enlint needs:
+`TYPESAFE_API_KEY` for evaluation, `NO_COLOR` for the color convention, and the
+`OPENAI_*` and `NODE_OPTIONS` variables that the OpenAI SDK reads when advice is
+requested. Network access is limited to the two provider hosts. `--version` and
+`--help` run without any permission at all.
+
+Evaluation requires `TYPESAFE_API_KEY`. `OPENAI_API_KEY` is needed only for
+`--explain` and `--fix`; lint runs without it.
+
+```bash
+export TYPESAFE_API_KEY=...
+enlint --context work "Could you review this today?"
+pbpaste | enlint --context email --output json
+```
+
+Remove the command with `deno uninstall -g enlint`.
+
 ## Evaluation
 
 enlint evaluates complete messages rather than isolated sentences. It covers:

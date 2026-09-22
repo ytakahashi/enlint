@@ -206,7 +206,7 @@ function toSdkQuestions(
 }
 
 export class JevEvaluator implements Evaluator {
-  readonly #apiKey: string;
+  readonly #resolveApiKey: () => string;
   readonly #runEvaluation: JevEvaluationRunner;
   readonly #timeoutMs: number;
 
@@ -215,7 +215,8 @@ export class JevEvaluator implements Evaluator {
     if (!Number.isInteger(timeoutMs) || timeoutMs <= 0) {
       throw new RangeError("Jev evaluator timeout must be a positive integer");
     }
-    this.#apiKey = options.apiKey;
+    const apiKey = options.apiKey;
+    this.#resolveApiKey = typeof apiKey === "function" ? apiKey : () => apiKey;
     this.#runEvaluation = options.runEvaluation ?? runJevEvaluation;
     this.#timeoutMs = timeoutMs;
   }
@@ -223,7 +224,7 @@ export class JevEvaluator implements Evaluator {
   async evaluate(request: EvaluationRequest): Promise<EvaluationOutcome> {
     const input = buildJevInput(request);
     const response = await this.#runEvaluation({
-      apiKey: this.#apiKey,
+      apiKey: this.#resolveApiKey(),
       model: JEV_MODEL_ID,
       state: input.state,
       questions: input.questions,
@@ -235,7 +236,12 @@ export class JevEvaluator implements Evaluator {
 }
 
 export type JevEvaluatorOptions = {
-  readonly apiKey: string;
+  /**
+   * A thunk defers reading the credential until an evaluation actually runs,
+   * so commands that never evaluate (`--version`, `--help`) stay free of the
+   * permission the composition root would otherwise need at startup.
+   */
+  readonly apiKey: string | (() => string);
   readonly runEvaluation?: JevEvaluationRunner;
   /** Per-request deadline. Batch tools may need longer than the CLI default. */
   readonly timeoutMs?: number;

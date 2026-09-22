@@ -121,6 +121,22 @@ Deno.test("layer-dependencies isolates the openai dependency", () => {
   );
 });
 
+Deno.test("layer-dependencies confines the manifest import to the version module", () => {
+  const message = "deno.json may only be imported by cli/version.ts";
+  const importManifest = [
+    'import config from "../deno.json" with { type: "json" };',
+  ];
+
+  assertEquals(lint("cli/version.ts", importManifest), []);
+  assertEquals(lint("cli/args.ts", importManifest), [message]);
+  assertEquals(
+    lint("core/domain/metric.ts", [
+      'import config from "../../deno.json" with { type: "json" };',
+    ]),
+    [message],
+  );
+});
+
 Deno.test("core-no-deno-api reports Deno APIs used in core only", () => {
   assertEquals(
     lint("core/domain/entity.ts", [

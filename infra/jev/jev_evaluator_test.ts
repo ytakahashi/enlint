@@ -102,6 +102,31 @@ Deno.test("JevEvaluator allows batch callers to extend the deadline", async () =
   assertEquals(calls[0].timeoutMs, 30_000);
 });
 
+Deno.test("JevEvaluator reads a thunk credential only while evaluating", async () => {
+  const calls: JevEvaluationOptions[] = [];
+  const response = await completeResponse();
+  let reads = 0;
+  const evaluator = new JevEvaluator({
+    apiKey: () => {
+      reads += 1;
+      return "lazy-key";
+    },
+    runEvaluation: (options) => {
+      calls.push(options);
+      return Promise.resolve(response);
+    },
+  });
+
+  // Composition happens before argument parsing, so a thunk must stay unread
+  // until an evaluation is actually requested.
+  assertEquals(reads, 0);
+
+  await evaluator.evaluate(REQUEST);
+
+  assertEquals(reads, 1);
+  assertEquals(calls[0].apiKey, "lazy-key");
+});
+
 Deno.test("JevEvaluator rejects invalid deadlines", () => {
   assertThrows(
     () => new JevEvaluator({ apiKey: "test-key", timeoutMs: 0 }),
