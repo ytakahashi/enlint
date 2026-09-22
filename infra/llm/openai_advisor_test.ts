@@ -70,7 +70,7 @@ Deno.test("OpenAiAdvisor sends configured SDK input and maps the response", asyn
   const outcome = await advisor.advise(REQUEST);
 
   assertEquals(calls.length, 1);
-  assertEquals(calls[0].model, "gpt-5.6-luna");
+  assertEquals(calls[0].model, "gpt-6-luna");
   assertEquals(calls[0].timeoutMs, 30_000);
   assertEquals(calls[0].maxRetries, 2);
   assertEquals(calls[0].body.store, false);
