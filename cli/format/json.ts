@@ -6,6 +6,10 @@ import {
 } from "#core/mod.ts";
 import type { LintReport } from "./report.ts";
 
+// Increment for any change to the JSON schema or field semantics, including
+// additive fields, so consumers can distinguish the contract they receive.
+const JSON_FORMAT_VERSION = 2;
+
 export function formatJson(report: LintReport): string {
   const result = report.lintResult;
   const metrics = METRIC_DEFINITIONS.map((definition) => {
@@ -48,7 +52,7 @@ export function formatJson(report: LintReport): string {
   });
 
   const output = {
-    version: 2,
+    version: JSON_FORMAT_VERSION,
     text: result.text,
     context: result.contextId,
     overallScore: result.overallScore,

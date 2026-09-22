@@ -35,6 +35,54 @@ Deno.test("layer-dependencies limits external dependencies from core", () => {
   assertEquals(lint("cli/main.ts", ['import { p } from "@std/cli";']), []);
 });
 
+Deno.test("layer-dependencies exposes Core through its public entry point", () => {
+  const message =
+    "infra production modules must import Core through core/mod.ts";
+
+  assertEquals(
+    lint("core/application/lint_message.ts", [
+      'import { METRIC_DEFINITIONS } from "#core/domain/metric.ts";',
+    ]),
+    [],
+  );
+  assertEquals(
+    lint("infra/jev/adapter.ts", [
+      'import type { Evaluator } from "#core/domain/evaluator.ts";',
+    ]),
+    [message],
+  );
+  assertEquals(
+    lint("infra/jev/adapter.ts", [
+      'import type { Evaluator } from "#core/mod.ts";',
+    ]),
+    [],
+  );
+  assertEquals(
+    lint("infra/jev/adapter_test.ts", [
+      'import type { Evaluator } from "#core/domain/evaluator.ts";',
+    ]),
+    [],
+  );
+  assertEquals(
+    lint("tools/golden/tuning.ts", [
+      'import { READY_STATUS_SCORE_THRESHOLD } from "#core/application/_thresholds.ts";',
+    ]),
+    [],
+  );
+  assertEquals(
+    lint("tests/helper.ts", [
+      'import type { EvaluationRequest } from "#core/domain/evaluator.ts";',
+    ]),
+    [],
+  );
+  assertEquals(
+    lint("cli/main.ts", [
+      'import { lintMessage } from "../core/application/lint_message.ts";',
+    ]),
+    ["cli production modules must import Core through core/mod.ts"],
+  );
+});
+
 Deno.test("layer-dependencies isolates the TypeSafe dependency", () => {
   const message =
     "@typesafe-ai/sdk may only be imported by infra/jev/jev_evaluator.ts";

@@ -1,4 +1,4 @@
-import type { EvaluationRequest } from "#core/domain/evaluator.ts";
+import type { EvaluationRequest } from "#core/mod.ts";
 import type { JevEvaluationInput, JevQuestion } from "./_types.ts";
 
 export function buildJevInput(
@@ -29,6 +29,8 @@ export function buildJevInput(
   }
 
   return {
+    // Jev evaluates every question against one shared state. Consequently the
+    // context can influence every metric, even if only Context Fit names it.
     state:
       `Context: ${request.profile.description}\n\nMessage:\n${request.text}`,
     questions,

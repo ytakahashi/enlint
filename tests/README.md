@@ -50,3 +50,19 @@ rather than mixing observations from two model versions.
 
 The golden test lives in `golden/` next to its corpus so that `test:live` can
 run the contract tests without triggering a full corpus evaluation.
+
+### Changing evaluation policy
+
+Rubrics and weights in `core/domain/metric.ts` and thresholds in
+`core/application/_thresholds.ts` are the shipped evaluation policy. When one of
+them changes, run `deno task golden:report`: use the calibration split to select
+a candidate, and adopt it only when the fixed validation split improves over the
+current policy. Also run the deterministic test suite for normalization and
+exact threshold boundaries. That suite also verifies that the search references
+in `tools/golden/tuning.ts` mirror the shipped thresholds; update both locations
+rather than changing the assertion when adopting new values.
+
+The report may recommend new weights or thresholds from stored observations, but
+it never rewrites production definitions. Live responses and observed scores are
+not committed; the corpus, labels, and analysis rules are the reproducible
+inputs kept in the repository.

@@ -25,6 +25,8 @@ export type MetricResult = {
   readonly probabilities: Readonly<Record<string, number>> | undefined;
 };
 
+// Weights are calibration inputs, not presentation preferences. Validate any
+// change against the golden corpus before adopting it.
 export const METRIC_DEFINITIONS = [
   {
     id: "naturalness",

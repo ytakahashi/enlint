@@ -4,6 +4,9 @@ import { BUILT_IN_CONTEXT_PROFILES } from "#core/domain/context_profile.ts";
 import type { EvaluationRequest } from "#core/domain/evaluator.ts";
 import { JUDGEMENT_DEFINITIONS } from "#core/domain/judgement.ts";
 import { METRIC_DEFINITIONS } from "#core/domain/metric.ts";
+// The live contract must compare real responses and the recorded fixture using
+// the adapter's private wire shape, so this file is an explicit exception to
+// the `_` prefix rule.
 import type { JevEvaluationResponse } from "#infra/jev/_types.ts";
 import { mapJevResponse } from "#infra/jev/answer_mapper.ts";
 import {
@@ -108,6 +111,9 @@ function requireTypeSafeCredential(): string {
 }
 
 async function readCompleteFixture(): Promise<JevEvaluationResponse> {
+  // The live contract must compare a real response with the adapter's recorded
+  // private fixture, so this access is an explicit exception to the `_` prefix
+  // rule.
   const text = await Deno.readTextFile(
     new URL("../infra/jev/_fixtures/complete_response.json", import.meta.url),
   );

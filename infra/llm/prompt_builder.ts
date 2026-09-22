@@ -1,6 +1,9 @@
-import type { AdviceKind, AdviceRequest } from "#core/domain/advisor.ts";
-import type { LintResult } from "#core/domain/lint_result.ts";
-import { METRIC_DEFINITIONS } from "#core/domain/metric.ts";
+import {
+  type AdviceKind,
+  type AdviceRequest,
+  type LintResult,
+  METRIC_DEFINITIONS,
+} from "#core/mod.ts";
 import {
   ADVICE_SCHEMA_NAME,
   MAX_REWRITE_CANDIDATES,

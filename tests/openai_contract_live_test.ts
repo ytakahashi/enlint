@@ -2,6 +2,8 @@ import { assert, assertEquals } from "@std/assert";
 import type { AdviceKind, AdviceRequest } from "#core/domain/advisor.ts";
 import type { ContextProfile } from "#core/domain/context_profile.ts";
 import type { LintResult } from "#core/domain/lint_result.ts";
+// The live contract must verify that real responses honor the adapter's private
+// schema limit, so this file is an explicit exception to the `_` prefix rule.
 import { MAX_REWRITE_CANDIDATES } from "#infra/llm/_types.ts";
 import { runOpenAiAdvice } from "#infra/llm/openai_advisor.ts";
 import { buildOpenAiAdviceRequest } from "#infra/llm/prompt_builder.ts";

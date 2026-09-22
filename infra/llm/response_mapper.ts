@@ -4,7 +4,7 @@ import type {
   AdviceRequest,
   IssueExplanation,
   RewriteCandidate,
-} from "#core/domain/advisor.ts";
+} from "#core/mod.ts";
 import { MAX_REWRITE_CANDIDATES } from "./_types.ts";
 
 export class InvalidOpenAiAdviceResponseError extends Error {

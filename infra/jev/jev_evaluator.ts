@@ -2,7 +2,7 @@ import type {
   EvaluationOutcome,
   EvaluationRequest,
   Evaluator,
-} from "#core/domain/evaluator.ts";
+} from "#core/mod.ts";
 import type { Questions } from "@typesafe-ai/sdk";
 import type { JevEvaluationRunner, JevQuestion } from "./_types.ts";
 import { mapJevResponse } from "./answer_mapper.ts";

@@ -17,6 +17,7 @@ const ALLOWED_LAYER_DEPENDENCIES: Readonly<
 
 const JEV_ADAPTER_PATH = "infra/jev/jev_evaluator.ts";
 const OPENAI_ADAPTER_PATH = "infra/llm/openai_advisor.ts";
+const CORE_PUBLIC_ENTRYPOINT = "core/mod.ts";
 const DENO_NAMESPACE = "Deno";
 const CORE_NO_DENO_API_MESSAGE =
   "core must not depend on Deno APIs; use Web standard APIs instead";
@@ -126,6 +127,15 @@ function violationOf(
   }
 
   const targetLayer = getLayer(target);
+  // Published modules must use Core's public entry point. Adjacent *_test.ts
+  // modules are excluded from publication and may inspect internal contracts;
+  // other test helpers remain subject to this rule until explicitly excluded.
+  if (
+    layer !== "core" && targetLayer === "core" &&
+    target !== CORE_PUBLIC_ENTRYPOINT && !isTestModule(path)
+  ) {
+    return `${layer} production modules must import Core through ${CORE_PUBLIC_ENTRYPOINT}`;
+  }
   if (
     targetLayer !== undefined &&
     ALLOWED_LAYER_DEPENDENCIES[layer].has(targetLayer)

@@ -1,8 +1,4 @@
-import type {
-  AdviceOutcome,
-  AdviceRequest,
-  Advisor,
-} from "#core/domain/advisor.ts";
+import type { AdviceOutcome, AdviceRequest, Advisor } from "#core/mod.ts";
 import type { OpenAiAdviceCall, OpenAiAdviceRunner } from "./_types.ts";
 import { buildOpenAiAdviceRequest } from "./prompt_builder.ts";
 import { mapOpenAiAdviceResponse } from "./response_mapper.ts";

@@ -1,14 +1,14 @@
-import type { ToneValue } from "#core/domain/classification.ts";
 import type {
   EvaluationOutcome,
   EvaluationRequest,
   EvaluationUsage,
+  JudgementId,
+  MetricId,
   RawBooleanAnswer,
   RawChoiceAnswer,
   RawScoreAnswer,
-} from "#core/domain/evaluator.ts";
-import type { JudgementId } from "#core/domain/judgement.ts";
-import type { MetricId } from "#core/domain/metric.ts";
+  ToneValue,
+} from "#core/mod.ts";
 
 // The live contract test verifies that probabilities and scores use a
 // two-decimal grid. The API does not expose that precision as metadata, so

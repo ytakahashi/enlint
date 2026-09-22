@@ -6,8 +6,7 @@ improve it yourself and see how each change affects the result.
 
 ## Evaluation
 
-enlint will evaluate complete messages rather than isolated sentences. The
-initial evaluation covers:
+enlint evaluates complete messages rather than isolated sentences. It covers:
 
 - Naturalness
 - Grammar
@@ -16,7 +15,14 @@ initial evaluation covers:
 - Tone classification
 
 The overall score is calculated deterministically from the individual metrics.
-Evaluation results will be available as human-readable text or structured JSON.
+Evaluation results are available as human-readable text or versioned structured
+JSON. Use `--explain` or `--fix` to request optional explanations or rewrite
+candidates without changing the lint score.
+
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for cross-cutting boundaries and
+dependency rules.
 
 ## Development
 
@@ -45,7 +51,7 @@ access to `TYPESAFE_API_KEY` and network access to `api.typesafe.ai`. OpenAI
 advice retains access to `OPENAI_*` and `api.openai.com`.
 
 Tests that call external APIs are kept separate, one task per provider. For
-details, see [tests/README.md](tests/README.md)
+details, see [tests/README.md](tests/README.md).
 
 ## License
 
