@@ -18,6 +18,8 @@ const ALLOWED_LAYER_DEPENDENCIES: Readonly<
 const JEV_ADAPTER_PATH = "infra/jev/jev_evaluator.ts";
 const OPENAI_ADAPTER_PATH = "infra/llm/openai_advisor.ts";
 const CORE_PUBLIC_ENTRYPOINT = "core/mod.ts";
+const PACKAGE_MANIFEST_PATH = "deno.json";
+const VERSION_MODULE_PATH = "cli/version.ts";
 const DENO_NAMESPACE = "Deno";
 const CORE_NO_DENO_API_MESSAGE =
   "core must not depend on Deno APIs; use Web standard APIs instead";
@@ -124,6 +126,15 @@ function violationOf(
       return undefined;
     }
     return "core modules may not import external packages";
+  }
+
+  // The manifest is the single source of truth for the version, and importing
+  // it is how the CLI avoids duplicating that value. It is not a layer, so pin
+  // the exception to the one module that derives the version from it.
+  if (target === PACKAGE_MANIFEST_PATH) {
+    return path === VERSION_MODULE_PATH
+      ? undefined
+      : `${PACKAGE_MANIFEST_PATH} may only be imported by ${VERSION_MODULE_PATH}`;
   }
 
   const targetLayer = getLayer(target);

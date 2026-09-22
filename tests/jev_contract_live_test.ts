@@ -75,6 +75,16 @@ function answerEvidenceContract(
   );
 }
 
+/**
+ * Checks both ends of the rounding grid, because only one of them is a bound.
+ *
+ * `answer_mapper` accepts half a unit of slack per value on distribution sums
+ * and weighted means, which assumes hundredths. The API returns no rounding
+ * metadata, so the assumption can only be observed here. An upper bound alone
+ * would stay green if the API moved to coarser rounding -- and that is the
+ * direction that breaks the tolerance and makes the adapter reject valid
+ * responses, so the test also demands a value off the tenths grid.
+ */
 function assertTwoDecimalRounding(
   answers: JevEvaluationResponse["answers"],
 ): void {

@@ -3,7 +3,7 @@ import type { OpenAiAdviceCall, OpenAiAdviceRunner } from "./_types.ts";
 import { buildOpenAiAdviceRequest } from "./prompt_builder.ts";
 import { mapOpenAiAdviceResponse } from "./response_mapper.ts";
 
-const DEFAULT_MODEL_ID = "gpt-5.6-luna";
+const DEFAULT_MODEL_ID = "gpt-6-luna";
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -85,9 +85,12 @@ export function classifyOpenAiError(
 }
 
 /** Low-level SDK boundary exposed for live contract verification. */
-export const runOpenAiAdvice: OpenAiAdviceRunner = async (
-  { model, body, timeoutMs, maxRetries },
-) => {
+export const runOpenAiAdvice: OpenAiAdviceRunner = async ({
+  model,
+  body,
+  timeoutMs,
+  maxRetries,
+}) => {
   // Loading the SDK initializes its environment-based authentication. Keep it
   // on the advice path so lint-only CLI runs do not load an unused provider.
   const { default: OpenAI } = await import("openai");

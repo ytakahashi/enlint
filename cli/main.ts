@@ -11,7 +11,9 @@ if (import.meta.main) {
   const getEnv = (name: string) => Deno.env.get(name);
   Deno.exitCode = await run(Deno.args, {
     evaluator: new JevEvaluator({
-      apiKey: getEnv("TYPESAFE_API_KEY") ?? "",
+      // Read the key lazily: `deno install` grants no permissions, so
+      // --version and --help must not touch the environment.
+      apiKey: () => getEnv("TYPESAFE_API_KEY") ?? "",
     }),
     advisor: new OpenAiAdvisor(),
     stdin: {

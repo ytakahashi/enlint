@@ -9,7 +9,7 @@ import { runOpenAiAdvice } from "#infra/llm/openai_advisor.ts";
 import { buildOpenAiAdviceRequest } from "#infra/llm/prompt_builder.ts";
 import { mapOpenAiAdviceResponse } from "#infra/llm/response_mapper.ts";
 
-const MODEL_ID = "gpt-5.6-luna";
+const MODEL_ID = "gpt-6-luna";
 const TIMEOUT_MS = 60_000;
 const MAX_RETRIES = 2;
 

@@ -17,7 +17,11 @@
     "exclude": [
       "**/*_test.ts",
       "**/_fixtures/",
+      ".claude/",
+      ".github/",
+      "AGENTS.md",
       "core/testing/",
+      "deno.lock",
       "desktop/",
       "tests/",
       "tools/"
@@ -34,7 +38,7 @@
     "check": "deno check .",
     "lint": "deno lint",
     "cli": "deno run --allow-env=TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net=api.typesafe.ai,api.openai.com cli/main.ts",
-    "test": "deno test --allow-read --ignore=tests/",
+    "test": "deno test --allow-read --allow-run=deno --ignore=tests/",
     "test:golden": "deno test --allow-read --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/golden/",
     "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tools/golden/run.ts",
     "test:live:jev": "deno test --allow-read --allow-env=TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/jev_contract_live_test.ts",
