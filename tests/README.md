@@ -20,15 +20,18 @@ deliberately. Neither writes fixtures automatically, and neither prints the
 credential.
 
 The OpenAI test asserts structure only, never wording: explanation counts match
-the lint issues, every issue is explained exactly once, and candidates appear
-only when fixes were requested. Those bounds come from the schema the prompt
-builder generates, so the test is what proves the provider honors it. Advice
-quality is judged in real use, not here.
+the lint issues, every issue is explained exactly once, and candidates are
+absent when fixes were not requested and within the limit when they were. A fix
+request may still yield no candidates, which the schema and the Advisor port
+allow. Those bounds come from the schema the prompt builder generates, so the
+test is what proves the provider honors it. Advice quality is judged in real
+use, not here.
 
-The Jev adapter supplies all environment-backed SDK options in code, so its task
-grants only `TYPESAFE_API_KEY` and network access to `api.typesafe.ai`. The
-OpenAI task grants `OPENAI_*` because that SDK owns its environment-based
-configuration. Neither task needs system information permissions.
+Both adapters supply their environment-backed SDK options in code, so each task
+grants only its provider's API key variable and network access to that
+provider's host. The OpenAI SDK still reads `OPENAI_CUSTOM_HEADERS`
+unconditionally, so its task denies that variable rather than letting Deno
+prompt for it. Neither task needs system information permissions.
 
 ## Golden corpus
 

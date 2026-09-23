@@ -50,11 +50,12 @@ const LINT_RESULT = {
 } as const satisfies LintResult;
 
 Deno.test("live OpenAI advice satisfies the requested response schema", async () => {
-  requireCredential();
+  const apiKey = requireCredential();
 
   for (const kind of ["explain", "fix", "both"] as const) {
     const request = adviceRequest(kind);
     const response = await runOpenAiAdvice({
+      apiKey,
       model: MODEL_ID,
       body: buildOpenAiAdviceRequest(request),
       timeoutMs: TIMEOUT_MS,
@@ -89,11 +90,17 @@ Deno.test("live OpenAI advice satisfies the requested response schema", async ()
       kind === "fix" ? [] : [0, 1],
       `${kind}: every lint issue must be explained exactly once`,
     );
-    assertEquals(
-      outcome.candidates.length === 0,
-      kind === "explain",
-      `${kind}: candidates must be empty only when fixes are unrequested`,
-    );
+    // Only the explain-only bound is asserted in both directions. With fixes
+    // requested the schema sets no minItems, and the Advisor port allows an
+    // empty list when no issue is worth a rewrite; the model does return one
+    // occasionally, so requiring a candidate would make this test flaky.
+    if (kind === "explain") {
+      assertEquals(
+        outcome.candidates.length,
+        0,
+        `${kind}: candidates must be empty when fixes are unrequested`,
+      );
+    }
     assert(
       outcome.candidates.length <= MAX_REWRITE_CANDIDATES,
       `${kind}: candidate count must respect maxItems`,
@@ -105,10 +112,12 @@ function adviceRequest(kind: AdviceKind): AdviceRequest {
   return { kind, lintResult: LINT_RESULT, profile: PROFILE };
 }
 
-function requireCredential(): void {
-  if (!(Deno.env.get("OPENAI_API_KEY") ?? "").trim()) {
+function requireCredential(): string {
+  const apiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
+  if (!apiKey.trim()) {
     throw new Error("set OPENAI_API_KEY before running live tests");
   }
+  return apiKey;
 }
 
 /** Prints the captured contract so fixtures can be refreshed deliberately. */

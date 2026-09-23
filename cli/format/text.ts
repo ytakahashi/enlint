@@ -1,5 +1,6 @@
 import {
   type AdviceKind,
+  isLowConfidence,
   METRIC_DEFINITIONS,
   type RewriteCandidate,
   type Status,
@@ -25,10 +26,6 @@ const STATUS_COLORS = {
 const METRIC_LABEL_WIDTH = Math.max(
   ...METRIC_DEFINITIONS.map(({ label }) => label.length),
 ) + 3;
-
-// Corpus p10 was 0.44 for metrics and 0.42 for tone. A lower cutoff keeps the
-// default output quiet while still surfacing unusually diffuse distributions.
-const LOW_CONFIDENCE_THRESHOLD = 0.4;
 
 export function formatText(
   report: LintReport,
@@ -129,9 +126,7 @@ function prefixLines(
 }
 
 function lowConfidenceSuffix(confidence: number | undefined): string {
-  return confidence !== undefined && confidence < LOW_CONFIDENCE_THRESHOLD
-    ? "  (low confidence)"
-    : "";
+  return isLowConfidence(confidence) ? "  (low confidence)" : "";
 }
 
 function style(text: string, code: number, enabled: boolean): string {

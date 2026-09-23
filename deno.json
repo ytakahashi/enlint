@@ -37,12 +37,12 @@
     "fmt:check": "deno fmt --check",
     "check": "deno check .",
     "lint": "deno lint",
-    "cli": "deno run --allow-env=TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net=api.typesafe.ai,api.openai.com cli/main.ts",
+    "cli": "deno run --allow-env=TYPESAFE_API_KEY,OPENAI_API_KEY,NO_COLOR --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.typesafe.ai,api.openai.com cli/main.ts",
     "test": "deno test --allow-read --allow-run=deno --ignore=tests/",
     "test:golden": "deno test --allow-read --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/golden/",
     "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tools/golden/run.ts",
     "test:live:jev": "deno test --allow-read --allow-env=TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/jev_contract_live_test.ts",
-    "test:live:openai": "deno test --allow-read --allow-env=OPENAI_*,NODE_OPTIONS --allow-net tests/openai_contract_live_test.ts",
+    "test:live:openai": "deno test --allow-read --allow-env=OPENAI_API_KEY --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.openai.com tests/openai_contract_live_test.ts",
     "test:live": "deno task test:live:jev && deno task test:live:openai"
   }
 }

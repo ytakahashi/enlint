@@ -1,4 +1,4 @@
-#!/usr/bin/env -S deno run --allow-env=TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR --allow-net=api.typesafe.ai,api.openai.com
+#!/usr/bin/env -S deno run --allow-env=TYPESAFE_API_KEY,OPENAI_API_KEY,NO_COLOR --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.typesafe.ai,api.openai.com
 
 import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";
 import { OpenAiAdvisor } from "#infra/llm/openai_advisor.ts";
@@ -15,7 +15,9 @@ if (import.meta.main) {
       // --version and --help must not touch the environment.
       apiKey: () => getEnv("TYPESAFE_API_KEY") ?? "",
     }),
-    advisor: new OpenAiAdvisor(),
+    advisor: new OpenAiAdvisor({
+      apiKey: () => getEnv("OPENAI_API_KEY") ?? "",
+    }),
     stdin: {
       isTerminal: () => Deno.stdin.isTerminal(),
       readText: () => new Response(Deno.stdin.readable).text(),
