@@ -1,5 +1,10 @@
 # enlint
 
+[![GitHub release](https://img.shields.io/github/release/ytakahashi/enlint.svg)](https://github.com/ytakahashi/enlint/releases/)
+[![JSR](https://jsr.io/badges/@ytakahashi/enlint)](https://jsr.io/@ytakahashi/enlint)
+[![CI](https://github.com/ytakahashi/enlint/actions/workflows/deno.yml/badge.svg)](https://github.com/ytakahashi/enlint/actions/workflows/deno.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 enlint is an English linter for reviewing messages. It scores writing and
 reports issues without immediately rewriting the original text, so you can
 improve it yourself and see how each change affects the result.
@@ -8,20 +13,27 @@ improve it yourself and see how each change affects the result.
 
 ```bash
 deno install -gf \
-  --allow-env=TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR \
+  --allow-env='TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR' \
   --allow-net=api.typesafe.ai,api.openai.com \
   jsr:@ytakahashi/enlint
 ```
 
-`deno install` grants no permissions on its own, so the flags above are part of
-the command rather than of the package. They are the complete set enlint needs:
-`TYPESAFE_API_KEY` for evaluation, `NO_COLOR` for the color convention, and the
-`OPENAI_*` and `NODE_OPTIONS` variables that the OpenAI SDK reads when advice is
-requested. Network access is limited to the two provider hosts. `--version` and
-`--help` run without any permission at all.
+### Requirements
+
+- Deno
+- [TypeSafe AI](https://typesafe.ai/) API Key
+- [OpenAI](https://openai.com/api/) API Key (for explaining/fixing)
 
 Evaluation requires `TYPESAFE_API_KEY`. `OPENAI_API_KEY` is needed only for
 `--explain` and `--fix`; lint runs without it.
+
+### Notes
+
+- The quotes around `--allow-env` are required in zsh, which would otherwise try
+  to expand `OPENAI_*` as a filename pattern.
+- Within 24 hours of a release, `deno install` refuses the new version under its
+  minimum dependency age policy. Add `--min-dep-age=0` to install it right away,
+  or wait out the window.
 
 ```bash
 export TYPESAFE_API_KEY=...
@@ -46,11 +58,6 @@ Evaluation results are available as human-readable text or versioned structured
 JSON. Use `--explain` or `--fix` to request optional explanations or rewrite
 candidates without changing the lint score.
 
-## Architecture
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for cross-cutting boundaries and
-dependency rules.
-
 ## Development
 
 Deno 2.9.5 is the currently tested runtime version.
@@ -71,11 +78,6 @@ deno task cli --help
 deno task cli --context work --explain --fix "Could you review this today?"
 echo "I'll check it later." | deno task cli --context chat --output json
 ```
-
-The task exists so that the permission list does not have to be typed. The Jev
-adapter passes every environment-backed SDK option explicitly, so it only needs
-access to `TYPESAFE_API_KEY` and network access to `api.typesafe.ai`. OpenAI
-advice retains access to `OPENAI_*` and `api.openai.com`.
 
 Tests that call external APIs are kept separate, one task per provider. For
 details, see [tests/README.md](tests/README.md).
