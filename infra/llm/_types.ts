@@ -21,6 +21,7 @@ export type OpenAiAdviceRequestBody = {
 };
 
 export type OpenAiAdviceCall = {
+  readonly apiKey: string;
   readonly model: string;
   readonly body: OpenAiAdviceRequestBody;
   readonly timeoutMs: number;

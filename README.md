@@ -13,7 +13,8 @@ improve it yourself and see how each change affects the result.
 
 ```bash
 deno install -gf \
-  --allow-env='TYPESAFE_API_KEY,OPENAI_*,NODE_OPTIONS,NO_COLOR' \
+  --allow-env=TYPESAFE_API_KEY,OPENAI_API_KEY,NO_COLOR \
+  --deny-env=OPENAI_CUSTOM_HEADERS \
   --allow-net=api.typesafe.ai,api.openai.com \
   jsr:@ytakahashi/enlint
 ```
@@ -29,8 +30,9 @@ Evaluation requires `TYPESAFE_API_KEY`. `OPENAI_API_KEY` is needed only for
 
 ### Notes
 
-- The quotes around `--allow-env` are required in zsh, which would otherwise try
-  to expand `OPENAI_*` as a filename pattern.
+- The OpenAI SDK always reads `OPENAI_CUSTOM_HEADERS`. `--deny-env` makes that
+  read fail silently instead of prompting, and keeps the environment from
+  injecting request headers.
 - Within 24 hours of a release, `deno install` refuses the new version under its
   minimum dependency age policy. Add `--min-dep-age=0` to install it right away,
   or wait out the window.
@@ -60,7 +62,7 @@ candidates without changing the lint score.
 
 ## Development
 
-Deno 2.9.5 is the currently tested runtime version.
+Deno 2.9.7 is the currently tested runtime version.
 
 ```bash
 deno task fmt:check

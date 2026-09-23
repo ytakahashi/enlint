@@ -1,4 +1,5 @@
 export { adviseLintResult } from "./application/advise_lint_result.ts";
+export { isLowConfidence } from "./application/confidence.ts";
 export { lintMessage } from "./application/lint_message.ts";
 export type { LintMessageInput } from "./application/lint_message.ts";
 export type {

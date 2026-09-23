@@ -4,6 +4,7 @@ import { buildOpenAiAdviceRequest } from "./prompt_builder.ts";
 import { mapOpenAiAdviceResponse } from "./response_mapper.ts";
 
 const DEFAULT_MODEL_ID = "gpt-6-luna";
+const BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_MAX_RETRIES = 2;
 const DEFAULT_TIMEOUT_MS = 30_000;
 
@@ -86,17 +87,35 @@ export function classifyOpenAiError(
 
 /** Low-level SDK boundary exposed for live contract verification. */
 export const runOpenAiAdvice: OpenAiAdviceRunner = async ({
+  apiKey,
   model,
   body,
   timeoutMs,
   maxRetries,
 }) => {
-  // Loading the SDK initializes its environment-based authentication. Keep it
-  // on the advice path so lint-only CLI runs do not load an unused provider.
+  // Keep the SDK on the advice path so lint-only runs do not load an unused
+  // provider.
   const { default: OpenAI } = await import("openai");
+  if (apiKey.trim().length === 0) {
+    throw new OpenAiAuthenticationError(
+      new Error("OpenAI API key is missing"),
+    );
+  }
 
   try {
-    const client = new OpenAI();
+    const client = new OpenAI({
+      apiKey,
+      // Specify every env-backed option so the SDK does not read them from
+      // process.env. null, not undefined, is what suppresses the env default.
+      // OPENAI_CUSTOM_HEADERS is still read unconditionally, so presentations
+      // deny that variable instead of letting Deno prompt for it.
+      baseURL: BASE_URL,
+      adminAPIKey: null,
+      organization: null,
+      project: null,
+      webhookSecret: null,
+      logLevel: "off",
+    });
     const response = await client.responses.create(
       {
         model,
@@ -150,12 +169,13 @@ export const runOpenAiAdvice: OpenAiAdviceRunner = async ({
 };
 
 export class OpenAiAdvisor implements Advisor {
+  readonly #resolveApiKey: () => string;
   readonly #model: string;
   readonly #timeoutMs: number;
   readonly #maxRetries: number;
   readonly #runResponse: OpenAiAdviceRunner;
 
-  constructor(options: OpenAiAdvisorOptions = {}) {
+  constructor(options: OpenAiAdvisorOptions) {
     const model = options.model ?? DEFAULT_MODEL_ID;
     const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
@@ -172,6 +192,8 @@ export class OpenAiAdvisor implements Advisor {
       );
     }
 
+    const apiKey = options.apiKey;
+    this.#resolveApiKey = typeof apiKey === "function" ? apiKey : () => apiKey;
     this.#model = model;
     this.#timeoutMs = timeoutMs;
     this.#maxRetries = maxRetries;
@@ -180,6 +202,7 @@ export class OpenAiAdvisor implements Advisor {
 
   async advise(request: AdviceRequest): Promise<AdviceOutcome> {
     const call: OpenAiAdviceCall = {
+      apiKey: this.#resolveApiKey(),
       model: this.#model,
       body: buildOpenAiAdviceRequest(request),
       timeoutMs: this.#timeoutMs,
@@ -209,6 +232,11 @@ export class OpenAiAdvisor implements Advisor {
 }
 
 export type OpenAiAdvisorOptions = {
+  /**
+   * A thunk defers reading the credential until advice is requested, so runs
+   * that only lint never need the permission to read it.
+   */
+  readonly apiKey: string | (() => string);
   readonly model?: string;
   readonly timeoutMs?: number;
   readonly maxRetries?: number;
