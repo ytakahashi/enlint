@@ -171,3 +171,170 @@ Deno.test("core-no-deno-api reports Deno APIs used in core only", () => {
     [],
   );
 });
+
+Deno.test("layer-dependencies separates desktop areas by runtime", () => {
+  assertEquals(
+    lint("desktop/main.ts", [
+      'import { createHandlers } from "./host/handlers.ts";',
+      'import type { Bindings } from "./protocol/mod.ts";',
+      'import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";',
+      'import { lintMessage } from "#core/mod.ts";',
+    ]),
+    [],
+  );
+  assertEquals(
+    lint("desktop/host/handlers.ts", [
+      'import type { Bindings } from "../protocol/mod.ts";',
+      'import { session } from "../ui/state/session.ts";',
+      'import { run } from "../main.ts";',
+    ]),
+    [
+      "desktop/host may not depend on desktop/ui",
+      "desktop/host may not depend on desktop/main.ts",
+    ],
+  );
+  assertEquals(
+    lint("desktop/ui/state/session.ts", [
+      'import type { Bindings } from "../../protocol/mod.ts";',
+      'import { isLowConfidence } from "#core/mod.ts";',
+      'import { signal } from "@preact/signals";',
+      'import { createHandlers } from "../../host/handlers.ts";',
+      'import { JevEvaluator } from "#infra/jev/jev_evaluator.ts";',
+    ]),
+    [
+      "desktop/ui may not depend on desktop/host",
+      "desktop/ui may not depend on infra",
+    ],
+  );
+  assertEquals(
+    lint("desktop/protocol/mod.ts", [
+      'import type { LintResult } from "#core/mod.ts";',
+      'import type { Session } from "../ui/state/session.ts";',
+      'import type { Advisor } from "#infra/llm/openai_advisor.ts";',
+    ]),
+    [
+      "desktop/protocol may not depend on desktop/ui",
+      "desktop/protocol may not depend on infra",
+    ],
+  );
+});
+
+Deno.test("layer-dependencies requires desktop modules to belong to an area", () => {
+  const message =
+    "desktop modules must be desktop/main.ts or live under desktop/host, desktop/protocol, or desktop/ui";
+  // Reported once per file, whatever it imports, and even with no imports.
+  assertEquals(
+    lint("desktop/helpers.ts", [
+      'import { a } from "./host/a.ts";',
+      'import { signal } from "@preact/signals";',
+    ]),
+    [message],
+  );
+  assertEquals(lint("desktop/helpers.ts", ["export const x = 1;"]), [message]);
+  assertEquals(
+    lint("desktop/shared/format.ts", ["export const x = 1;"]),
+    [message],
+  );
+  assertEquals(lint("desktop/host/handlers.ts", ["export const x = 1;"]), []);
+  assertEquals(
+    lint("desktop/host/handlers.ts", ['import { a } from "../shared/a.ts";']),
+    ["desktop/host may not depend on files outside desktop areas"],
+  );
+});
+
+Deno.test("layer-dependencies lets only the composition root load UI assets", () => {
+  const entryMessage =
+    "desktop/main.ts may import desktop/ui only as text or bytes";
+
+  assertEquals(
+    lint("desktop/main.ts", [
+      'import html from "./ui/index.html" with { type: "text" };',
+      'import css from "./ui/style.css" with { type: "text" };',
+      'import app from "./_dist/app.js" with { type: "text" };',
+      'import icon from "./ui/icon.png" with { type: "bytes" };',
+    ]),
+    [],
+  );
+  // Webview code must never run in Deno, and a JSON module is still a module.
+  assertEquals(
+    lint("desktop/main.ts", [
+      'import { App } from "./ui/main.tsx";',
+      'import app from "./_dist/app.js";',
+      'import config from "./ui/config.json" with { type: "json" };',
+    ]),
+    Array(3).fill(entryMessage),
+  );
+  // The host receives assets from the composition root instead of reading them.
+  assertEquals(
+    lint("desktop/host/assets.ts", [
+      'import html from "../ui/index.html" with { type: "text" };',
+      'import app from "../_dist/app.js" with { type: "text" };',
+    ]),
+    Array(2).fill("desktop/host may not depend on desktop/ui"),
+  );
+  // The exception covers desktop areas, not the layer rule.
+  assertEquals(
+    lint("desktop/main.ts", [
+      'import help from "../cli/help.txt" with { type: "text" };',
+    ]),
+    ["desktop may not depend on cli"],
+  );
+});
+
+Deno.test("layer-dependencies keeps packages out of the desktop protocol", () => {
+  assertEquals(
+    lint("desktop/protocol/mod.ts", ['import { h } from "preact";']),
+    ["desktop/protocol modules may not import external packages"],
+  );
+  assertEquals(
+    lint("desktop/protocol/mod_test.ts", [
+      'import { assertEquals } from "@std/assert";',
+    ]),
+    [],
+  );
+});
+
+Deno.test("layer-dependencies isolates the diff dependency", () => {
+  const message = "diff may only be imported by desktop/ui/diff.ts";
+
+  assertEquals(
+    lint("desktop/ui/diff.ts", ['import { diffWords } from "diff";']),
+    [],
+  );
+  assertEquals(
+    lint("desktop/ui/components/candidate.tsx", [
+      'import { diffWords } from "npm:diff@8.0.2";',
+    ]),
+    [message],
+  );
+  assertEquals(
+    lint("desktop/host/handlers.ts", ['import { diffWords } from "diff";']),
+    [message],
+  );
+  assertEquals(
+    lint("desktop/ui/diff.ts", ['import value from "diff-match-patch";']),
+    [],
+  );
+});
+
+Deno.test("webview-no-deno-api reports Deno APIs in webview code only", () => {
+  const message =
+    "desktop/ui and desktop/protocol run in the webview and must not use Deno APIs";
+  const useDeno = ['export const home = Deno.env.get("HOME");'];
+
+  assertEquals(lint("desktop/ui/state/session.ts", useDeno), [message]);
+  assertEquals(
+    lint("desktop/protocol/mod.ts", [
+      "export const runtime = globalThis.Deno;",
+    ]),
+    [message],
+  );
+  assertEquals(lint("desktop/host/credentials.ts", useDeno), []);
+  assertEquals(lint("desktop/main.ts", useDeno), []);
+  assertEquals(
+    lint("desktop/ui/state/session_test.ts", [
+      'Deno.test("session", () => {});',
+    ]),
+    [],
+  );
+});

@@ -40,8 +40,10 @@ each presentation owns its composition root.
 
 The repository lint rules in [`tools/lint_plugin.ts`](./tools/lint_plugin.ts)
 define and enforce the exact directory-level dependencies. They also prevent
-runtime-specific APIs in production Core modules and restrict each provider SDK
-to a single adapter boundary file, keeping SDK-induced changes localized.
+runtime-specific APIs in production Core modules and restrict each provider SDK,
+and the desktop diff library, to a single adapter boundary file, keeping
+dependency-induced changes localized. The desktop presentation holds code for
+both Deno and its webview, so the rules also separate it into areas by runtime.
 
 Production modules outside Core access it through `core/mod.ts`. Symbols not
 re-exported there are Core implementation details. Repository-only tests and
