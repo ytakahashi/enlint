@@ -10,8 +10,10 @@
     "#infra/": "./infra/",
     "@std/assert": "jsr:@std/assert@^1",
     "@std/cli": "jsr:@std/cli@^1",
+    "@preact/signals": "npm:@preact/signals@2.11.2",
     "@preact/signals-core": "npm:@preact/signals-core@1.14.4",
     "diff": "npm:diff@9.0.0",
+    "preact": "npm:preact@10.29.8",
     "@typesafe-ai/sdk": "npm:@typesafe-ai/sdk@0.6.0",
     "openai": "npm:openai@7.20.0"
   },
@@ -29,7 +31,15 @@
       "tools/"
     ]
   },
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  },
+  "fmt": {
+    "exclude": ["desktop/_dist/", "dist/"]
+  },
   "lint": {
+    "exclude": ["desktop/_dist/", "dist/"],
     "plugins": [
       "./tools/lint_plugin.ts"
     ]
@@ -37,7 +47,10 @@
   "tasks": {
     "fmt": "deno fmt",
     "fmt:check": "deno fmt --check",
-    "check": "deno check .",
+    "check": {
+      "description": "Type-check in separate programs. A lib reference applies to the whole program it is checked in, so the webview's DOM types and the deno desktop types must not be checked together with core, infra, or cli, where they would hide misuse.",
+      "command": "deno task desktop:bundle && deno check core infra cli tools tests && deno check --desktop desktop/main.ts desktop/host desktop/protocol && deno check desktop/ui"
+    },
     "lint": "deno lint",
     "cli": "deno run --allow-env=TYPESAFE_API_KEY,OPENAI_API_KEY,NO_COLOR --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.typesafe.ai,api.openai.com cli/main.ts",
     "test": "deno test --allow-read --allow-run=deno --ignore=tests/",
@@ -45,6 +58,15 @@
     "golden:report": "deno run --allow-read --allow-write=.enlint --allow-env=ENLINT_GOLDEN_*,TYPESAFE_API_KEY --allow-net=api.typesafe.ai tools/golden/run.ts",
     "test:live:jev": "deno test --allow-read --allow-env=TYPESAFE_API_KEY --allow-net=api.typesafe.ai tests/jev_contract_live_test.ts",
     "test:live:openai": "deno test --allow-read --allow-env=OPENAI_API_KEY --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.openai.com tests/openai_contract_live_test.ts",
-    "test:live": "deno task test:live:jev && deno task test:live:openai"
+    "test:live": "deno task test:live:jev && deno task test:live:openai",
+    "desktop:bundle": "deno bundle --quiet --platform browser --minify --sourcemap=inline --output desktop/_dist/app.js desktop/ui/main.tsx",
+    "desktop:dev": "deno task desktop:bundle && deno desktop --hmr --allow-env=TYPESAFE_API_KEY,OPENAI_API_KEY --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.typesafe.ai,api.openai.com --allow-run=/usr/bin/security desktop/main.ts",
+    "desktop:build": "deno task desktop:bundle && deno desktop --allow-env=TYPESAFE_API_KEY,OPENAI_API_KEY --deny-env=OPENAI_CUSTOM_HEADERS --allow-net=api.typesafe.ai,api.openai.com --allow-run=/usr/bin/security --output dist/enlint desktop/main.ts"
+  },
+  "desktop": {
+    "app": {
+      "name": "enlint",
+      "identifier": "io.github.ytakahashi.enlint"
+    }
   }
 }
