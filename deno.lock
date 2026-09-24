@@ -6,7 +6,9 @@
     "jsr:@std/fmt@^1.0.10": "1.0.10",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/internal@^1.0.14": "1.0.14",
+    "npm:@preact/signals-core@1.14.4": "1.14.4",
     "npm:@typesafe-ai/sdk@0.6.0": "0.6.0",
+    "npm:diff@9.0.0": "9.0.0",
     "npm:openai@7.20.0": "7.20.0"
   },
   "jsr": {
@@ -31,8 +33,14 @@
     }
   },
   "npm": {
+    "@preact/signals-core@1.14.4": {
+      "integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA=="
+    },
     "@typesafe-ai/sdk@0.6.0": {
       "integrity": "sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw=="
+    },
+    "diff@9.0.0": {
+      "integrity": "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="
     },
     "openai@7.20.0": {
       "integrity": "sha512-5x5ru4cKEvEqHqYZbdIbT57OE7KqmP9YYxZiUKuKng016grOHXqom1vmu34MTPPW30q+lcP9RhxAbaRse+Xlcw=="
@@ -42,7 +50,9 @@
     "dependencies": [
       "jsr:@std/assert@1",
       "jsr:@std/cli@1",
+      "npm:@preact/signals-core@1.14.4",
       "npm:@typesafe-ai/sdk@0.6.0",
+      "npm:diff@9.0.0",
       "npm:openai@7.20.0"
     ]
   }
