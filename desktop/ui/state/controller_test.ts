@@ -450,12 +450,39 @@ Deno.test("setting unchanged text or context keeps the check running", async () 
   });
 });
 
-Deno.test("copy forwards the text to the gateway", async () => {
-  const { controller, copies } = startWith({});
+Deno.test("copyCandidate copies a candidate of the result on screen", async () => {
+  const { controller, copies } = await withFixAdvice();
 
-  assertEquals(await controller.copy("She goes to work."), {
+  assertEquals(await controller.copyCandidate(CANDIDATE), {
     ok: true,
     value: null,
   });
-  assertEquals(copies, ["She goes to work."]);
+  assertEquals(copies, [CANDIDATE]);
+});
+
+Deno.test("copyCandidate copies nothing once the candidate no longer matches", async () => {
+  const unknown = await withFixAdvice();
+  assertEquals(
+    await unknown.controller.copyCandidate("She goes to the office."),
+    undefined,
+  );
+
+  const edited = await withFixAdvice();
+  edited.controller.setText("She went to work.");
+  assertEquals(await edited.controller.copyCandidate(CANDIDATE), undefined);
+
+  const recontexted = await withFixAdvice();
+  recontexted.controller.setContextId("chat");
+  assertEquals(
+    await recontexted.controller.copyCandidate(CANDIDATE),
+    undefined,
+  );
+
+  const rechecked = await withFixAdvice();
+  void rechecked.controller.check();
+  assertEquals(await rechecked.controller.copyCandidate(CANDIDATE), undefined);
+
+  for (const { copies } of [unknown, edited, recontexted, rechecked]) {
+    assertEquals(copies, []);
+  }
 });

@@ -60,6 +60,30 @@ Evaluation results are available as human-readable text or versioned structured
 JSON. Use `--explain` or `--fix` to request optional explanations or rewrite
 candidates without changing the lint score.
 
+## Desktop app
+
+A macOS desktop app offers the same features in one window: write or paste a
+message, press Check, and apply or copy a candidate.
+
+Apps started from Finder or the Dock do not see shell exports, so the app reads
+its API keys from the environment first and then from the macOS Keychain.
+Register them as below. `-U` updates an existing item.
+
+```bash
+security add-generic-password -U -s enlint -a TYPESAFE_API_KEY -w "$TYPESAFE_API_KEY"
+security add-generic-password -U -s enlint -a OPENAI_API_KEY -w "$OPENAI_API_KEY"
+```
+
+Build the app and open it:
+
+```bash
+deno task desktop:build
+open dist/enlint.app
+```
+
+`deno task desktop:dev` runs the app from source with hot reload for the Deno
+side. Changes to the UI need `deno task desktop:bundle` and View > Reload.
+
 ## Development
 
 Deno 2.9.7 is the currently tested runtime version.

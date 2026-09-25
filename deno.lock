@@ -6,10 +6,13 @@
     "jsr:@std/fmt@^1.0.10": "1.0.10",
     "jsr:@std/internal@^1.0.12": "1.0.14",
     "jsr:@std/internal@^1.0.14": "1.0.14",
+    "jsr:@std/yaml@1": "1.2.0",
     "npm:@preact/signals-core@1.14.4": "1.14.4",
+    "npm:@preact/signals@2.11.2": "2.11.2_preact@10.29.8",
     "npm:@typesafe-ai/sdk@0.6.0": "0.6.0",
     "npm:diff@9.0.0": "9.0.0",
-    "npm:openai@7.20.0": "7.20.0"
+    "npm:openai@7.20.0": "7.20.0",
+    "npm:preact@10.29.8": "10.29.8"
   },
   "jsr": {
     "@std/assert@1.0.19": {
@@ -30,11 +33,21 @@
     },
     "@std/internal@1.0.14": {
       "integrity": "291516b3d4c35024d6ffbc0a9df5bf4c64116e05b50012cf846710152d2ffdf7"
+    },
+    "@std/yaml@1.2.0": {
+      "integrity": "20beb41e4983ba3437dbefac62b14061ab058e8a187596f19d28ff9035f6e6cf"
     }
   },
   "npm": {
     "@preact/signals-core@1.14.4": {
       "integrity": "sha512-HNB6HYeYKhQbJ1aKl+YRjrS4+QWHLKX6qKoUsfS/m0vqzsVaEBiZiaKbG/e+NKk2ch5ALQr/ihWaMHxiCuuWHA=="
+    },
+    "@preact/signals@2.11.2_preact@10.29.8": {
+      "integrity": "sha512-rVTRTt/T0HIRgbugwS5FigbfF/kfdEFYFtiqxa+lbpqTajepqnR0firuAS2iNdHyejWB7Yc9p9QePkVNBtTAwg==",
+      "dependencies": [
+        "@preact/signals-core",
+        "preact"
+      ]
     },
     "@typesafe-ai/sdk@0.6.0": {
       "integrity": "sha512-IddX+Q0XM+VagOUZFeP7wZjaO4SHMdvnh2zEBdrZZnXedWI3BNK1lKhMx3ayrkFWvVLbVcUHJy6AVZlY+e6Jaw=="
@@ -44,6 +57,9 @@
     },
     "openai@7.20.0": {
       "integrity": "sha512-5x5ru4cKEvEqHqYZbdIbT57OE7KqmP9YYxZiUKuKng016grOHXqom1vmu34MTPPW30q+lcP9RhxAbaRse+Xlcw=="
+    },
+    "preact@10.29.8": {
+      "integrity": "sha512-ej2aVZ+vZ8WO7tvlQWRM9N63A0KzF9q4mWJfDUHgYaIofWY9hu74QdnQrjoPMmZi2/nZ5gN0bJCQF49xQqx09Q=="
     }
   },
   "workspace": {
@@ -51,9 +67,11 @@
       "jsr:@std/assert@1",
       "jsr:@std/cli@1",
       "npm:@preact/signals-core@1.14.4",
+      "npm:@preact/signals@2.11.2",
       "npm:@typesafe-ai/sdk@0.6.0",
       "npm:diff@9.0.0",
-      "npm:openai@7.20.0"
+      "npm:openai@7.20.0",
+      "npm:preact@10.29.8"
     ]
   }
 }

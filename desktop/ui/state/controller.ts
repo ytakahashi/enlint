@@ -22,7 +22,11 @@ export type SessionController = {
   /** Replaces the text with a rewrite candidate of the shown result. */
   apply(candidate: string): void;
   undoApply(): void;
-  copy(text: string): Promise<Result<null>>;
+  /**
+   * Copies a candidate of the result on screen. Resolves to undefined without
+   * copying when the candidate no longer matches the input, like apply.
+   */
+  copyCandidate(candidate: string): Promise<Result<null> | undefined>;
 };
 
 export function createSessionController(
@@ -131,8 +135,14 @@ export function createSessionController(
       changeInput({ text: textBeforeApply, textBeforeApply: undefined });
     },
 
-    copy(text) {
-      return gateway.copyText(text);
+    copyCandidate(candidate) {
+      // Copying is how a candidate leaves the app, so it gets the same guard
+      // as apply: a candidate for edited text or another context is not a
+      // rewrite of what the writer now has.
+      if (!isCandidateOf(session.value, candidate)) {
+        return Promise.resolve(undefined);
+      }
+      return gateway.copyText(candidate);
     },
   };
 }

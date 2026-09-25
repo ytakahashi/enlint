@@ -38,3 +38,22 @@ jobs:
 
       - name: Test
         run: deno task test
+
+  # Build the desktop app, which the checks above cannot cover: the desktop
+  # config, the embedded UI bundle, and the backend download only fail when
+  # `deno desktop` runs. The ad-hoc signed app is not uploaded.
+  desktop-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.9.7"
+          cache: true
+
+      - name: Install dependencies
+        run: deno install --frozen
+
+      - name: Build desktop app
+        run: deno task desktop:build

@@ -12,3 +12,7 @@ coverage/
 
 # Resumable output from live golden corpus runs
 .enlint/
+
+# Desktop UI bundle and app builds
+desktop/_dist/
+dist/
