@@ -62,18 +62,16 @@ candidates without changing the lint score.
 
 ## Desktop app
 
-A macOS desktop app offers the same lint, explanations, and rewrite candidates
-in one window: write or paste a message, press Check (⌘↵), and apply or copy a
-candidate. It is built locally from this repository and is not published.
+A macOS desktop app offers the same features in one window: write or paste a
+message, press Check, and apply or copy a candidate.
 
 Apps started from Finder or the Dock do not see shell exports, so the app reads
 its API keys from the environment first and then from the macOS Keychain.
-Register them once per machine; `-w` without a value prompts for it, so the key
-stays out of the shell history.
+Register them as below. `-U` updates an existing item.
 
 ```bash
-security add-generic-password -s enlint -a TYPESAFE_API_KEY -w
-security add-generic-password -s enlint -a OPENAI_API_KEY -w
+security add-generic-password -U -s enlint -a TYPESAFE_API_KEY -w "$TYPESAFE_API_KEY"
+security add-generic-password -U -s enlint -a OPENAI_API_KEY -w "$OPENAI_API_KEY"
 ```
 
 Build the app and open it:
