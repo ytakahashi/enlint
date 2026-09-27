@@ -1,11 +1,14 @@
 import {
-  type AdviceKind,
+  type AdviceOutcome,
   adviseLintResult,
   type Advisor,
   BUILT_IN_CONTEXT_PROFILE_IDS,
+  type ContextProfile,
   type Evaluator,
   getBuiltInContextProfile,
+  isAdvisable,
   lintMessage,
+  type LintResult,
 } from "#core/mod.ts";
 import { HELP_TEXT, parseArgs } from "./args.ts";
 import {
@@ -16,8 +19,7 @@ import {
   executionErrorMessage,
 } from "./errors.ts";
 import { formatJson } from "./format/json.ts";
-import type { AdviceReport, LintReport } from "./format/report.ts";
-import { formatText } from "./format/text.ts";
+import { formatAdviceText, formatLintText } from "./format/text.ts";
 import { resolveInput, type Stdin } from "./input.ts";
 
 export type TextWriter = {
@@ -61,46 +63,37 @@ export async function run(
     }
     const text = await resolveInput(command.message, dependencies.stdin);
     requireCredentials(dependencies.getEnv);
-    const kind = requestedAdviceKind(command.explain, command.fix);
-    if (kind !== undefined) {
-      requireAdviceCredentials(dependencies.getEnv);
-    }
 
     const result = await lintMessage({ text, profile }, dependencies.evaluator);
-    let advice: AdviceReport | undefined;
-    let adviceFailure: { readonly error: unknown } | undefined;
-    if (kind !== undefined) {
-      try {
-        advice = {
-          kind,
-          outcome: await adviseLintResult(
-            { lintResult: result, profile, kind },
-            dependencies.advisor,
-          ),
-        };
-      } catch (error) {
-        adviceFailure = { error };
-      }
+    const textOptions = {
+      // https://no-color.org: NO_COLOR disables color when present and not
+      // empty, so an empty value must leave color enabled.
+      color: dependencies.stdout.isTerminal() && !command.noColor &&
+        (dependencies.getEnv("NO_COLOR") ?? "") === "",
+    };
+    // Text is written before advice is requested so the lint result is readable
+    // while advice is generated. JSON waits for advice: stdout is written only
+    // after serialization succeeds, so a failure never leaves partial JSON.
+    if (command.output === "text") {
+      await dependencies.stdout.write(formatLintText(result, textOptions));
     }
 
-    const report: LintReport = { lintResult: result, advice };
-    const output = command.output === "json"
-      ? formatJson(report)
-      : formatText(report, {
-        // https://no-color.org: NO_COLOR disables color when present and not
-        // empty, so an empty value must leave color enabled.
-        color: dependencies.stdout.isTerminal() && !command.noColor &&
-          (dependencies.getEnv("NO_COLOR") ?? "") === "",
-      });
-
-    // Delay stdout until evaluation and serialization have succeeded, so
-    // application failures cannot emit a partial JSON document.
-    await dependencies.stdout.write(output);
-    if (adviceFailure !== undefined) {
-      await dependencies.stderr.write(
-        `enlint: ${adviceErrorMessage(adviceFailure.error)}\n`,
+    const advice = command.lintOnly || !isAdvisable(result)
+      ? { outcome: undefined, notice: undefined }
+      : await requestAdvice(result, profile, dependencies);
+    if (command.output === "json") {
+      await dependencies.stdout.write(
+        formatJson({ lintResult: result, advice: advice.outcome }),
+      );
+    } else if (advice.outcome !== undefined) {
+      await dependencies.stdout.write(
+        formatAdviceText(result, advice.outcome, textOptions),
       );
     }
+    if (advice.notice !== undefined) {
+      await dependencies.stderr.write(`enlint: ${advice.notice}\n`);
+    }
+
     return command.minScore !== undefined &&
         result.overallScore < command.minScore
       ? 1
@@ -123,14 +116,41 @@ export async function run(
   }
 }
 
-function requestedAdviceKind(
-  explain: boolean,
-  fix: boolean,
-): AdviceKind | undefined {
-  if (explain && fix) return "both";
-  if (explain) return "explain";
-  if (fix) return "fix";
-  return undefined;
+type AdviceAttempt = {
+  readonly outcome: AdviceOutcome | undefined;
+  /** Why advice is missing, for stderr. */
+  readonly notice: string | undefined;
+};
+
+/**
+ * Advice complements the lint result, so neither a missing key nor a failed
+ * request fails the run: lint output and the exit status are kept.
+ */
+async function requestAdvice(
+  lintResult: LintResult,
+  profile: ContextProfile,
+  dependencies: RunDependencies,
+): Promise<AdviceAttempt> {
+  const apiKey = dependencies.getEnv("OPENAI_API_KEY");
+  if (apiKey === undefined || apiKey.trim().length === 0) {
+    return {
+      outcome: undefined,
+      notice:
+        "Set OPENAI_API_KEY to get explanations and rewrites, or pass --lint-only to skip them.",
+    };
+  }
+
+  try {
+    return {
+      outcome: await adviseLintResult(
+        { lintResult, profile, kind: "both" },
+        dependencies.advisor,
+      ),
+      notice: undefined,
+    };
+  } catch (error) {
+    return { outcome: undefined, notice: adviceErrorMessage(error) };
+  }
 }
 
 function requireCredentials(
@@ -140,17 +160,6 @@ function requireCredentials(
   if (apiKey === undefined || apiKey.trim().length === 0) {
     throw new CliExecutionError(
       "Set TYPESAFE_API_KEY before running an evaluation.",
-    );
-  }
-}
-
-function requireAdviceCredentials(
-  getEnv: (name: string) => string | undefined,
-): void {
-  const apiKey = getEnv("OPENAI_API_KEY");
-  if (apiKey === undefined || apiKey.trim().length === 0) {
-    throw new CliExecutionError(
-      "Set OPENAI_API_KEY before requesting advice.",
     );
   }
 }

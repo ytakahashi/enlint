@@ -7,7 +7,7 @@ import type {
 import type { ContextProfile } from "../domain/context_profile.ts";
 import type { LintResult } from "../domain/lint_result.ts";
 import { FakeAdvisor } from "../testing/fake_advisor.ts";
-import { adviseLintResult } from "./advise_lint_result.ts";
+import { adviseLintResult, isAdvisable } from "./advise_lint_result.ts";
 
 const PROFILE = {
   id: "work",
@@ -220,4 +220,9 @@ Deno.test("adviseLintResult preserves advisor failures", async () => {
   assertStrictEquals(thrown, error);
   assertEquals(advisor.requests.length, 1);
   assertStrictEquals(advisor.requests[0], request);
+});
+
+Deno.test("isAdvisable requires at least one issue", () => {
+  assertEquals(isAdvisable(LINT_RESULT), true);
+  assertEquals(isAdvisable({ ...LINT_RESULT, issues: [] }), false);
 });

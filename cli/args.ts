@@ -12,21 +12,20 @@ export type CliCommand =
     readonly contextId: string;
     readonly output: OutputFormat;
     readonly minScore: number | undefined;
-    readonly explain: boolean;
-    readonly fix: boolean;
+    readonly lintOnly: boolean;
     readonly noColor: boolean;
   };
 
 export const HELP_TEXT = `Usage: enlint [options] [message]
 
-Lint an English message supplied as an argument or through stdin.
+Lint an English message supplied as an argument or through stdin. When the
+result reports issues, explanations and rewrite candidates follow it.
 
 Options:
   --context <id>       Evaluation context (default: general)
   --output <text|json> Output format (default: text)
   --min-score <0-100>  Exit 1 when the overall score is below this value
-  --explain            Explain each issue using an LLM
-  --fix                Suggest rewrites using an LLM
+  --lint-only          Skip explanations and rewrite candidates
   --no-color           Disable colored output
   --help               Show this help
   --version            Show the version`;
@@ -34,7 +33,7 @@ Options:
 export function parseArgs(args: readonly string[]): CliCommand {
   const parsed = parseStdArgs(args, {
     string: ["context", "output", "min-score"],
-    boolean: ["explain", "fix", "no-color", "help", "version"],
+    boolean: ["lint-only", "no-color", "help", "version"],
     default: {
       context: "general",
       output: "text",
@@ -75,8 +74,7 @@ export function parseArgs(args: readonly string[]): CliCommand {
     contextId: requireNonEmptyOption(parsed.context, "--context"),
     output,
     minScore: parseMinScore(parsed["min-score"]),
-    explain: parsed.explain,
-    fix: parsed.fix,
+    lintOnly: parsed["lint-only"],
     noColor: parsed["no-color"],
   };
 }

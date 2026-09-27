@@ -173,7 +173,6 @@ function Advice(
   if ("error" in advice) {
     return <p class="error">{errorMessage(advice.error)}</p>;
   }
-  if (advice.kind === "explain") return null;
 
   const { candidates } = advice.outcome;
   return (

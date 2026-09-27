@@ -103,7 +103,7 @@ Deno.test("formatJson includes successful advice", () => {
 
   const output = JSON.parse(formatJson({
     lintResult: RESULT,
-    advice: { kind: "both", outcome: advice },
+    advice,
   }));
 
   assertEquals(output.advice, advice);

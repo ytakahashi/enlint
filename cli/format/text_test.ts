@@ -1,6 +1,6 @@
 import { assertEquals, assertMatch, assertStringIncludes } from "@std/assert";
 import type { LintResult } from "#core/domain/lint_result.ts";
-import { formatText } from "./text.ts";
+import { formatAdviceText, formatLintText } from "./text.ts";
 
 const RESULT: LintResult = {
   text: "Could you review this today?",
@@ -37,9 +37,9 @@ const RESULT: LintResult = {
   usage: undefined,
 };
 
-Deno.test("formatText renders the stable human-readable layout", () => {
+Deno.test("formatLintText renders the stable human-readable layout", () => {
   assertEquals(
-    formatText(report(), { color: false }),
+    formatLintText(RESULT, { color: false }),
     `Score: 85/100
 
 Naturalness   82/100
@@ -58,14 +58,14 @@ Status: Ready to send
   );
 });
 
-Deno.test("formatText states when no issues were found", () => {
+Deno.test("formatLintText states when no issues were found", () => {
   assertMatch(
-    formatText(report({ ...RESULT, issues: [] }), { color: false }),
+    formatLintText({ ...RESULT, issues: [] }, { color: false }),
     /Issues\nNone\n/,
   );
 });
 
-Deno.test("formatText maps every status and only colors when enabled", () => {
+Deno.test("formatLintText maps every status and only colors when enabled", () => {
   const labels = {
     ready: "Ready to send",
     improvable: "Understandable, but could be improved",
@@ -73,8 +73,8 @@ Deno.test("formatText maps every status and only colors when enabled", () => {
   } as const;
 
   for (const [status, label] of Object.entries(labels)) {
-    const plain = formatText(
-      report({ ...RESULT, status: status as LintResult["status"] }),
+    const plain = formatLintText(
+      { ...RESULT, status: status as LintResult["status"] },
       { color: false },
     );
     assertMatch(plain, new RegExp(`Status: ${label}$`, "m"));
@@ -82,14 +82,14 @@ Deno.test("formatText maps every status and only colors when enabled", () => {
   }
 
   assertEquals(
-    formatText(report(), { color: true }).includes("\u001b["),
+    formatLintText(RESULT, { color: true }).includes("\u001b["),
     true,
   );
 });
 
-Deno.test("formatText marks only unusually low confidence", () => {
-  const output = formatText(
-    report({
+Deno.test("formatLintText marks only unusually low confidence", () => {
+  const output = formatLintText(
+    {
       ...RESULT,
       metrics: [
         metric("naturalness", 82, 0.39),
@@ -101,7 +101,7 @@ Deno.test("formatText marks only unusually low confidence", () => {
         ...RESULT.classifications[0],
         confidence: 0.39,
       }],
-    }),
+    },
     { color: false },
   );
 
@@ -110,71 +110,74 @@ Deno.test("formatText marks only unusually low confidence", () => {
   assertMatch(output, /Tone: slightly formal {2}\(low confidence\)/);
 });
 
-Deno.test("formatText places explanations under their indexed issues", () => {
-  const output = formatText({
-    lintResult: RESULT,
-    advice: {
-      kind: "explain",
-      outcome: {
-        explanations: [{
-          issueIndex: 1,
-          explanation: "Use a more direct phrase.\nAvoid unnecessary words.",
-        }],
-        candidates: [],
+Deno.test("formatAdviceText lists explanations in issue order", () => {
+  const output = formatAdviceText(RESULT, {
+    explanations: [
+      {
+        issueIndex: 1,
+        explanation: "Use a more direct phrase.\nAvoid unnecessary words.",
       },
-    },
+      { issueIndex: 0, explanation: "Name the document." },
+    ],
+    candidates: [],
   }, { color: false });
 
   assertStringIncludes(
     output,
-    `- context: low
-- wording: low
-  Explanation: Use a more direct phrase.
-               Avoid unnecessary words.`,
+    `
+Explanations
+- context: Name the document.
+- wording: Use a more direct phrase.
+           Avoid unnecessary words.
+`,
   );
-  assertEquals(output.includes("Suggested rewrites"), false);
 });
 
-Deno.test("formatText renders rewrite candidates and their rationale", () => {
-  const output = formatText({
-    lintResult: RESULT,
-    advice: {
-      kind: "fix",
-      outcome: {
-        explanations: [],
-        candidates: [{
-          text: "Could you review this document\ntoday?",
-          rationale: "It names the object.\nIt remains concise.",
-        }],
-      },
-    },
+Deno.test("formatAdviceText renders rewrite candidates and their rationale", () => {
+  const output = formatAdviceText(RESULT, {
+    explanations: [],
+    candidates: [{
+      text: "Could you review this document\ntoday?",
+      rationale: "It names the object.\nIt remains concise.",
+    }],
   }, { color: false });
 
-  assertStringIncludes(
+  assertEquals(
     output,
-    `Suggested rewrites
+    `
+Explanations
+None
+
+Suggested rewrites
 1. Could you review this document
    today?
    Reason: It names the object.
-           It remains concise.`,
+           It remains concise.
+`,
   );
 });
 
-Deno.test("formatText states when no rewrite is suggested", () => {
-  const output = formatText({
-    lintResult: RESULT,
-    advice: {
-      kind: "both",
-      outcome: { explanations: [], candidates: [] },
-    },
-  }, { color: false });
+Deno.test("formatAdviceText states when no rewrite is suggested", () => {
+  const output = formatAdviceText(
+    RESULT,
+    { explanations: [], candidates: [] },
+    { color: false },
+  );
 
-  assertMatch(output, /Suggested rewrites\nNone\n/);
+  assertMatch(output, /Suggested rewrites\nNone\n$/);
 });
 
-function report(lintResult: LintResult = RESULT) {
-  return { lintResult, advice: undefined };
-}
+Deno.test("formatAdviceText only colors when enabled", () => {
+  const advice = { explanations: [], candidates: [] };
+  assertEquals(
+    formatAdviceText(RESULT, advice, { color: false }).includes("\u001b["),
+    false,
+  );
+  assertEquals(
+    formatAdviceText(RESULT, advice, { color: true }).includes("\u001b["),
+    true,
+  );
+});
 
 function metric(
   id: LintResult["metrics"][number]["id"],

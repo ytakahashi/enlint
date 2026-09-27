@@ -24,6 +24,11 @@ function lintResult(text: string, contextId = "work"): LintResult {
   };
 }
 
+/** A result without issues, which a Check does not ask advice for. */
+function cleanResult(text: string): LintResult {
+  return { ...lintResult(text), overallScore: 90, issues: [], status: "ready" };
+}
+
 const ADVICE: AdviceOutcome = {
   explanations: [{ issueIndex: 0, explanation: "Use 'goes'." }],
   candidates: [{ text: "She goes to work.", rationale: "Agreement." }],
@@ -86,7 +91,7 @@ function startWith(session: Partial<Session>) {
   return { ...fake, controller };
 }
 
-Deno.test("check lints the text and skips advice when no option is set", async () => {
+Deno.test("check lints the text and skips advice when it reports no issues", async () => {
   const { controller, lints, advices } = startWith({});
 
   const done = controller.check();
@@ -96,20 +101,21 @@ Deno.test("check lints the text and skips advice when no option is set", async (
     contextId: "work",
   });
 
-  lints[0].response.resolve({ ok: true, value: lintResult("She go to work.") });
+  lints[0].response.resolve({
+    ok: true,
+    value: cleanResult("She go to work."),
+  });
   await done;
 
   assertEquals(controller.session.value.check, {
     phase: "done",
-    result: lintResult("She go to work."),
+    result: cleanResult("She go to work."),
   });
   assertEquals(advices.length, 0);
 });
 
 Deno.test("check shows the lint result while advice is pending", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: true },
-  });
+  const { controller, lints, advices } = startWith({});
   const result = lintResult("She go to work.");
 
   const done = controller.check();
@@ -119,7 +125,6 @@ Deno.test("check shows the lint result while advice is pending", async () => {
   assertEquals(controller.session.value.check, {
     phase: "advising",
     result,
-    kind: "both",
   });
   assertEquals(advices[0].request, { lintResult: result, kind: "both" });
 
@@ -129,14 +134,32 @@ Deno.test("check shows the lint result while advice is pending", async () => {
   assertEquals(controller.session.value.check, {
     phase: "done",
     result,
-    advice: { kind: "both", outcome: ADVICE },
+    advice: { outcome: ADVICE },
   });
 });
 
 Deno.test("an advice failure keeps the lint result", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: false, fix: true },
+  const { controller, lints, advices } = startWith({});
+  const result = lintResult("She go to work.");
+
+  const done = controller.check();
+  lints[0].response.resolve({ ok: true, value: result });
+  await settle();
+  advices[0].response.resolve({
+    ok: false,
+    error: { kind: "timeout", provider: "openai" },
   });
+  await done;
+
+  assertEquals(controller.session.value.check, {
+    phase: "done",
+    result,
+    advice: { error: { kind: "timeout", provider: "openai" } },
+  });
+});
+
+Deno.test("a missing advice key completes the check without advice", async () => {
+  const { controller, lints, advices } = startWith({});
   const result = lintResult("She go to work.");
 
   const done = controller.check();
@@ -148,20 +171,11 @@ Deno.test("an advice failure keeps the lint result", async () => {
   });
   await done;
 
-  assertEquals(controller.session.value.check, {
-    phase: "done",
-    result,
-    advice: {
-      kind: "fix",
-      error: { kind: "missing-credentials", provider: "openai" },
-    },
-  });
+  assertEquals(controller.session.value.check, { phase: "done", result });
 });
 
 Deno.test("a lint failure is shown without requesting advice", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: false },
-  });
+  const { controller, lints, advices } = startWith({});
 
   const done = controller.check();
   lints[0].response.resolve({
@@ -195,18 +209,21 @@ Deno.test("a newer check supersedes one still in flight", async () => {
 
   // The superseded response arrives first and must not replace the pending
   // state of the newer check.
-  lints[0].response.resolve({ ok: true, value: lintResult("She go to work.") });
+  lints[0].response.resolve({
+    ok: true,
+    value: cleanResult("She go to work."),
+  });
   await first;
   assertEquals(controller.session.value.check, { phase: "linting" });
 
   lints[1].response.resolve({
     ok: true,
-    value: lintResult("She goes to work."),
+    value: cleanResult("She goes to work."),
   });
   await second;
   assertEquals(controller.session.value.check, {
     phase: "done",
-    result: lintResult("She goes to work."),
+    result: cleanResult("She goes to work."),
   });
 });
 
@@ -215,7 +232,10 @@ Deno.test("a superseded check drops a late response", async () => {
 
   const first = controller.check();
   const second = controller.check();
-  lints[1].response.resolve({ ok: true, value: lintResult("She go to work.") });
+  lints[1].response.resolve({
+    ok: true,
+    value: cleanResult("She go to work."),
+  });
   await second;
   lints[0].response.resolve({
     ok: false,
@@ -225,14 +245,12 @@ Deno.test("a superseded check drops a late response", async () => {
 
   assertEquals(controller.session.value.check, {
     phase: "done",
-    result: lintResult("She go to work."),
+    result: cleanResult("She go to work."),
   });
 });
 
 Deno.test("a superseded check drops late advice", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: false },
-  });
+  const { controller, lints, advices } = startWith({});
 
   const first = controller.check();
   lints[0].response.resolve({ ok: true, value: lintResult("She go to work.") });
@@ -254,22 +272,8 @@ Deno.test("a superseded check drops late advice", async () => {
   });
 });
 
-Deno.test("options changed during a check apply to the next one", async () => {
-  const { controller, lints, advices } = startWith({});
-
-  const done = controller.check();
-  controller.setOptions({ explain: true, fix: true });
-  lints[0].response.resolve({ ok: true, value: lintResult("She go to work.") });
-  await done;
-
-  assertEquals(advices.length, 0);
-  assertEquals(controller.session.value.options, { explain: true, fix: true });
-});
-
 Deno.test("checking again discards the previous advice", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: false },
-  });
+  const { controller, lints, advices } = startWith({});
   const first = controller.check();
   lints[0].response.resolve({ ok: true, value: lintResult("She go to work.") });
   await settle();
@@ -282,8 +286,8 @@ Deno.test("checking again discards the previous advice", async () => {
 });
 
 /** A controller showing a result with ADVICE, whose candidate is CANDIDATE. */
-async function withFixAdvice() {
-  const started = startWith({ options: { explain: false, fix: true } });
+async function withAdvice() {
+  const started = startWith({});
   const done = started.controller.check();
   started.lints[0].response.resolve({
     ok: true,
@@ -298,7 +302,7 @@ async function withFixAdvice() {
 const CANDIDATE = ADVICE.candidates[0].text;
 
 Deno.test("apply replaces the text and can be undone once", async () => {
-  const { controller } = await withFixAdvice();
+  const { controller } = await withAdvice();
 
   controller.apply(CANDIDATE);
 
@@ -314,7 +318,7 @@ Deno.test("apply replaces the text and can be undone once", async () => {
 });
 
 Deno.test("a manual edit drops the undo point", async () => {
-  const { controller } = await withFixAdvice();
+  const { controller } = await withAdvice();
 
   controller.apply(CANDIDATE);
   controller.setText("She goes to work daily.");
@@ -324,7 +328,7 @@ Deno.test("a manual edit drops the undo point", async () => {
 });
 
 Deno.test("apply is ignored once the result is stale", async () => {
-  const { controller } = await withFixAdvice();
+  const { controller } = await withAdvice();
 
   controller.setText("She went to work.");
   controller.apply(CANDIDATE);
@@ -334,7 +338,7 @@ Deno.test("apply is ignored once the result is stale", async () => {
 });
 
 Deno.test("apply accepts only a candidate of the result on screen", async () => {
-  const { controller } = await withFixAdvice();
+  const { controller } = await withAdvice();
 
   controller.apply("She goes to the office.");
 
@@ -342,7 +346,7 @@ Deno.test("apply accepts only a candidate of the result on screen", async () => 
 });
 
 Deno.test("apply is ignored while no result with candidates is shown", async () => {
-  // Idle, and a result whose Check asked for no advice.
+  // Idle, and a result without issues, for which no advice was requested.
   const idle = startWith({});
   idle.controller.apply(CANDIDATE);
   assertEquals(idle.controller.session.value.text, "She go to work.");
@@ -351,20 +355,20 @@ Deno.test("apply is ignored while no result with candidates is shown", async () 
   const done = linted.controller.check();
   linted.lints[0].response.resolve({
     ok: true,
-    value: lintResult("She go to work."),
+    value: cleanResult("She go to work."),
   });
   await done;
   linted.controller.apply(CANDIDATE);
   assertEquals(linted.controller.session.value.text, "She go to work.");
 
   // A late click on a candidate after Check started again.
-  const { controller } = await withFixAdvice();
+  const { controller } = await withAdvice();
   void controller.check();
   controller.apply(CANDIDATE);
   assertEquals(controller.session.value.text, "She go to work.");
 
   // And after the newer Check failed.
-  const failed = await withFixAdvice();
+  const failed = await withAdvice();
   const retry = failed.controller.check();
   failed.lints[1].response.resolve({
     ok: false,
@@ -376,9 +380,7 @@ Deno.test("apply is ignored while no result with candidates is shown", async () 
 });
 
 Deno.test("an edit during lint abandons the check", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: true },
-  });
+  const { controller, lints, advices } = startWith({});
 
   const done = controller.check();
   controller.setText("She goes to work.");
@@ -392,9 +394,7 @@ Deno.test("an edit during lint abandons the check", async () => {
 });
 
 Deno.test("a context change during lint abandons the check", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: false },
-  });
+  const { controller, lints, advices } = startWith({});
 
   const done = controller.check();
   controller.setContextId("chat");
@@ -406,9 +406,7 @@ Deno.test("a context change during lint abandons the check", async () => {
 });
 
 Deno.test("an edit during advice keeps the lint result and drops the advice", async () => {
-  const { controller, lints, advices } = startWith({
-    options: { explain: true, fix: false },
-  });
+  const { controller, lints, advices } = startWith({});
   const result = lintResult("She go to work.");
 
   const done = controller.check();
@@ -423,7 +421,7 @@ Deno.test("an edit during advice keeps the lint result and drops the advice", as
 });
 
 Deno.test("undoing an apply abandons a check started after it", async () => {
-  const { controller, lints } = await withFixAdvice();
+  const { controller, lints } = await withAdvice();
   controller.apply(CANDIDATE);
 
   const done = controller.check();
@@ -441,17 +439,20 @@ Deno.test("setting unchanged text or context keeps the check running", async () 
   const done = controller.check();
   controller.setText("She go to work.");
   controller.setContextId("work");
-  lints[0].response.resolve({ ok: true, value: lintResult("She go to work.") });
+  lints[0].response.resolve({
+    ok: true,
+    value: cleanResult("She go to work."),
+  });
   await done;
 
   assertEquals(controller.session.value.check, {
     phase: "done",
-    result: lintResult("She go to work."),
+    result: cleanResult("She go to work."),
   });
 });
 
 Deno.test("copyCandidate copies a candidate of the result on screen", async () => {
-  const { controller, copies } = await withFixAdvice();
+  const { controller, copies } = await withAdvice();
 
   assertEquals(await controller.copyCandidate(CANDIDATE), {
     ok: true,
@@ -461,24 +462,24 @@ Deno.test("copyCandidate copies a candidate of the result on screen", async () =
 });
 
 Deno.test("copyCandidate copies nothing once the candidate no longer matches", async () => {
-  const unknown = await withFixAdvice();
+  const unknown = await withAdvice();
   assertEquals(
     await unknown.controller.copyCandidate("She goes to the office."),
     undefined,
   );
 
-  const edited = await withFixAdvice();
+  const edited = await withAdvice();
   edited.controller.setText("She went to work.");
   assertEquals(await edited.controller.copyCandidate(CANDIDATE), undefined);
 
-  const recontexted = await withFixAdvice();
+  const recontexted = await withAdvice();
   recontexted.controller.setContextId("chat");
   assertEquals(
     await recontexted.controller.copyCandidate(CANDIDATE),
     undefined,
   );
 
-  const rechecked = await withFixAdvice();
+  const rechecked = await withAdvice();
   void rechecked.controller.check();
   assertEquals(await rechecked.controller.copyCandidate(CANDIDATE), undefined);
 
