@@ -118,8 +118,38 @@ kbd {
 }
 
 .placeholder,
-.pending {
+.pending,
+.busy {
   color: var(--color-muted);
+}
+
+/*
+ * Work in progress: the ellipsis grows one dot at a time. The width is
+ * animated rather than `content`, whose animation depends on the webview
+ * engine, and the dots are monospaced so each step reveals exactly one `ch`.
+ * `.pending` is not animated because it also marks finished states.
+ */
+.busy::after {
+  content: "...";
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  vertical-align: bottom;
+  font-family: ui-monospace, monospace;
+  animation: busy-ellipsis 1.2s steps(4, jump-none) infinite;
+}
+
+@keyframes busy-ellipsis {
+  to {
+    width: 3ch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .busy::after {
+    animation: none;
+    width: auto;
+  }
 }
 
 .notice {

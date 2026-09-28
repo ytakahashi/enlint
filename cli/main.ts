@@ -27,7 +27,14 @@ if (import.meta.main) {
       write: (text) => writeAll(Deno.stdout, text),
     },
     stderr: {
+      isTerminal: () => Deno.stderr.isTerminal(),
       write: (text) => writeAll(Deno.stderr, text),
+    },
+    scheduler: {
+      repeat(callback, ms) {
+        const id = setInterval(callback, ms);
+        return () => clearInterval(id);
+      },
     },
     getEnv,
     version: VERSION,
