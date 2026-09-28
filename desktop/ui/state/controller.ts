@@ -1,10 +1,9 @@
 import { type ReadonlySignal, signal } from "@preact/signals-core";
+import { isAdvisable } from "#core/mod.ts";
 import type { Result } from "../../protocol/mod.ts";
 import type { EnlintGateway } from "../gateway.ts";
 import {
-  adviceKindOf,
   canCheck,
-  type CheckOptions,
   type CheckState,
   INITIAL_SESSION,
   isStale,
@@ -16,8 +15,7 @@ export type SessionController = {
   /** A manual edit; it also drops the undo point left by Apply. */
   setText(text: string): void;
   setContextId(contextId: string): void;
-  setOptions(options: CheckOptions): void;
-  /** Lints the current text, then requests advice if an option asks for it. */
+  /** Lints the current text, then requests advice if it reports issues. */
   check(): Promise<void>;
   /** Replaces the text with a rewrite candidate of the shown result. */
   apply(candidate: string): void;
@@ -82,18 +80,11 @@ export function createSessionController(
       changeInput({ contextId });
     },
 
-    setOptions(options) {
-      update({ options });
-    },
-
     async check() {
-      const { text, contextId, options } = session.value;
+      const { text, contextId } = session.value;
       if (!canCheck(session.value)) return;
       const requestNumber = ++latestCheck;
       const isCurrent = () => requestNumber === latestCheck;
-      // Read the options once, so toggling them mid-flight does not change
-      // what this Check asks for.
-      const kind = adviceKindOf(options);
 
       setCheck({ phase: "linting" });
       const lint = await gateway.lint({ text, contextId });
@@ -103,20 +94,25 @@ export function createSessionController(
         return;
       }
       const result = lint.value;
-      if (kind === undefined) {
+      if (!isAdvisable(result)) {
         setCheck({ phase: "done", result });
         return;
       }
 
-      setCheck({ phase: "advising", result, kind });
-      const advice = await gateway.advise({ lintResult: result, kind });
+      setCheck({ phase: "advising", result });
+      const advice = await gateway.advise({ lintResult: result, kind: "both" });
       if (!isCurrent()) return;
+      // Advice is optional: without an advice key the Check completes with the
+      // lint result alone, rather than reporting an error for advice nobody
+      // set up.
+      if (!advice.ok && advice.error.kind === "missing-credentials") {
+        setCheck({ phase: "done", result });
+        return;
+      }
       setCheck({
         phase: "done",
         result,
-        advice: advice.ok
-          ? { kind, outcome: advice.value }
-          : { kind, error: advice.error },
+        advice: advice.ok ? { outcome: advice.value } : { error: advice.error },
       });
     },
 

@@ -9,7 +9,6 @@ export function Editor(
   { controller }: { readonly controller: SessionController },
 ) {
   const session = controller.session.value;
-  const { options } = session;
   const running = session.check.phase === "linting" ||
     session.check.phase === "advising";
 
@@ -38,30 +37,6 @@ export function Editor(
               </option>
             ))}
           </select>
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={options.explain}
-            onChange={(event) =>
-              controller.setOptions({
-                ...options,
-                explain: event.currentTarget.checked,
-              })}
-          />{" "}
-          Explain
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={options.fix}
-            onChange={(event) =>
-              controller.setOptions({
-                ...options,
-                fix: event.currentTarget.checked,
-              })}
-          />{" "}
-          Fix
         </label>
         <span class="spacer" />
         {session.textBeforeApply !== undefined && (

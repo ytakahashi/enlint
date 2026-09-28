@@ -1,11 +1,13 @@
 import {
-  type AdviceKind,
+  type AdviceOutcome,
   isLowConfidence,
+  type Issue,
+  type IssueExplanation,
+  type LintResult,
   METRIC_DEFINITIONS,
   type RewriteCandidate,
   type Status,
 } from "#core/mod.ts";
-import type { LintReport } from "./report.ts";
 
 export type TextFormatOptions = {
   readonly color: boolean;
@@ -27,11 +29,14 @@ const METRIC_LABEL_WIDTH = Math.max(
   ...METRIC_DEFINITIONS.map(({ label }) => label.length),
 ) + 3;
 
-export function formatText(
-  report: LintReport,
+/**
+ * Formats the lint result alone. Advice is formatted separately by
+ * formatAdviceText so the result can be written before advice is requested.
+ */
+export function formatLintText(
+  result: LintResult,
   options: TextFormatOptions,
 ): string {
-  const result = report.lintResult;
   const metrics = METRIC_DEFINITIONS.map((definition) => {
     const metric = result.metrics.find(({ id }) => id === definition.id);
     if (metric === undefined) {
@@ -46,34 +51,11 @@ export function formatText(
     throw new TypeError('missing result for classification "tone"');
   }
 
-  const explanations = new Map(
-    report.advice?.outcome.explanations.map((explanation) => [
-      explanation.issueIndex,
-      explanation.explanation,
-    ]),
-  );
   const issueLines = result.issues.length === 0
     ? ["None"]
-    : result.issues.flatMap(({ category, severity }, index) => {
-      const lines = [`- ${category}: ${severity}`];
-      const explanation = explanations.get(index);
-      if (explanation !== undefined) {
-        lines.push(...prefixLines(
-          explanation,
-          "  Explanation: ",
-          "               ",
-        ));
-      }
-      return lines;
-    });
-  const rewriteLines = report.advice !== undefined &&
-      includesFix(report.advice.kind)
-    ? [
-      "",
-      style("Suggested rewrites", 1, options.color),
-      ...formatCandidates(report.advice.outcome.candidates),
-    ]
-    : [];
+    : result.issues.map(({ category, severity }) =>
+      `- ${category}: ${severity}`
+    );
   const status = style(
     STATUS_LABELS[result.status],
     STATUS_COLORS[result.status],
@@ -89,15 +71,44 @@ export function formatText(
     "",
     style("Issues", 1, options.color),
     ...issueLines,
-    ...rewriteLines,
     "",
     `Status: ${status}`,
     "",
   ].join("\n");
 }
 
-function includesFix(kind: AdviceKind): boolean {
-  return kind === "fix" || kind === "both";
+/** Formats advice as a block that follows the output of formatLintText. */
+export function formatAdviceText(
+  result: LintResult,
+  advice: AdviceOutcome,
+  options: TextFormatOptions,
+): string {
+  return [
+    "",
+    style("Explanations", 1, options.color),
+    ...formatExplanations(result.issues, advice.explanations),
+    "",
+    style("Suggested rewrites", 1, options.color),
+    ...formatCandidates(advice.candidates),
+    "",
+  ].join("\n");
+}
+
+function formatExplanations(
+  issues: readonly Issue[],
+  explanations: readonly IssueExplanation[],
+): readonly string[] {
+  if (explanations.length === 0) {
+    return ["None"];
+  }
+
+  // Listed in issue order, whatever order the advisor returned them in.
+  return [...explanations]
+    .sort((left, right) => left.issueIndex - right.issueIndex)
+    .flatMap(({ issueIndex, explanation }) => {
+      const prefix = `- ${issues[issueIndex].category}: `;
+      return prefixLines(explanation, prefix, " ".repeat(prefix.length));
+    });
 }
 
 function formatCandidates(

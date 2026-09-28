@@ -4,6 +4,15 @@ import type {
   AdviceRequest,
   Advisor,
 } from "../domain/advisor.ts";
+import type { LintResult } from "../domain/lint_result.ts";
+
+/**
+ * Whether advice has anything to address. Advice explains and rewrites what the
+ * linter flagged, so a result without issues is never sent to an advisor.
+ */
+export function isAdvisable(lintResult: LintResult): boolean {
+  return lintResult.issues.length > 0;
+}
 
 export async function adviseLintResult(
   request: AdviceRequest,
@@ -60,7 +69,7 @@ function validateOutcome(
   }
   // Advice addresses what the linter flagged. Without this an advisor can
   // restate the message as a rewrite of a result that reported nothing.
-  if (issueCount === 0 && outcome.candidates.length > 0) {
+  if (!isAdvisable(request.lintResult) && outcome.candidates.length > 0) {
     throw new TypeError(
       "advice contains rewrite candidates for a lint result with no issues",
     );

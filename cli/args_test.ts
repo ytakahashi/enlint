@@ -9,8 +9,7 @@ Deno.test("parseArgs returns lint defaults and a single message", () => {
     contextId: "general",
     output: "text",
     minScore: undefined,
-    explain: false,
-    fix: false,
+    lintOnly: false,
     noColor: false,
   });
 });
@@ -23,8 +22,7 @@ Deno.test("parseArgs validates and converts lint options", () => {
       "json",
       "--min-score",
       "82.5",
-      "--explain",
-      "--fix",
+      "--lint-only",
       "--no-color",
     ]),
     {
@@ -33,8 +31,7 @@ Deno.test("parseArgs validates and converts lint options", () => {
       contextId: "work",
       output: "json",
       minScore: 82.5,
-      explain: true,
-      fix: true,
+      lintOnly: true,
       noColor: true,
     },
   );
@@ -50,6 +47,8 @@ Deno.test("parseArgs rejects unknown and malformed options", () => {
   for (
     const args of [
       ["--unknown"],
+      ["--explain"],
+      ["--fix"],
       ["--output", "yaml"],
       ["--context="],
       ["--min-score="],

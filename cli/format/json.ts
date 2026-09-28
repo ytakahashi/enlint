@@ -71,7 +71,7 @@ export function formatJson(report: LintReport): string {
     judgements,
     usage: formatUsage(result.usage),
     issues: result.issues,
-    advice: report.advice?.outcome ?? null,
+    advice: report.advice ?? null,
   };
 
   return `${JSON.stringify(output, null, 2)}\n`;

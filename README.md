@@ -26,7 +26,8 @@ deno install -gf \
 - [OpenAI](https://openai.com/api/) API Key (for explaining/fixing)
 
 Evaluation requires `TYPESAFE_API_KEY`. `OPENAI_API_KEY` is needed only for
-`--explain` and `--fix`; lint runs without it.
+explanations and rewrite candidates; without it, enlint prints the lint result
+and a notice that advice was skipped.
 
 ### Notes
 
@@ -41,6 +42,7 @@ Evaluation requires `TYPESAFE_API_KEY`. `OPENAI_API_KEY` is needed only for
 export TYPESAFE_API_KEY=...
 enlint --context work "Could you review this today?"
 pbpaste | enlint --context email --output json
+enlint --lint-only --min-score 80 "Thanks for the update."
 ```
 
 Remove the command with `deno uninstall -g enlint`.
@@ -57,13 +59,19 @@ enlint evaluates complete messages rather than isolated sentences. It covers:
 
 The overall score is calculated deterministically from the individual metrics.
 Evaluation results are available as human-readable text or versioned structured
-JSON. Use `--explain` or `--fix` to request optional explanations or rewrite
-candidates without changing the lint score.
+JSON.
+
+When the result reports issues, enlint explains each issue and suggests rewrite
+candidates for the same result, without evaluating the message again or changing
+its score. Text output shows the lint result first and appends the advice once
+it arrives; JSON output is written once both are ready. Use `--lint-only` to
+skip advice, for example in CI.
 
 ## Desktop app
 
 A macOS desktop app offers the same features in one window: write or paste a
-message, press Check, and apply or copy a candidate.
+message, press Check, and apply or copy a candidate. As in the command, advice
+follows automatically when the result reports issues.
 
 Apps started from Finder or the Dock do not see shell exports, so the app reads
 its API keys from the environment first and then from the macOS Keychain.
@@ -96,12 +104,11 @@ deno task test
 ```
 
 `deno task cli` runs the command against the real services, forwarding any
-arguments. It needs `TYPESAFE_API_KEY`, and `OPENAI_API_KEY` as well when advice
-is requested.
+arguments. It needs `TYPESAFE_API_KEY`, and `OPENAI_API_KEY` as well for advice.
 
 ```bash
 deno task cli --help
-deno task cli --context work --explain --fix "Could you review this today?"
+deno task cli --context work "Could you review this today?"
 echo "I'll check it later." | deno task cli --context chat --output json
 ```
 

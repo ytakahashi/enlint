@@ -64,9 +64,11 @@ Evaluation definitions describe what to ask. Provider adapters own how those
 definitions become requests. This keeps rubric and context changes independent
 of a particular SDK and localizes SDK-specific changes at the provider boundary.
 
-The CLI composes the concrete adapters. Linting uses only the evaluator;
-explanations and rewrite candidates invoke the advisor only when requested.
-Advisor failure does not discard a successful lint result.
+The CLI composes the concrete adapters. Linting uses only the evaluator. The
+advisor receives the lint result already produced, so explanations and rewrite
+candidates never trigger a second evaluation; it is invoked only for a result
+that reports issues, and presentations may skip it. Advisor failure does not
+discard a successful lint result.
 
 ## Test placement
 

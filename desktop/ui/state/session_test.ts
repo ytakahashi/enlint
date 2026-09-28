@@ -1,7 +1,6 @@
 import { assertEquals } from "@std/assert";
 import type { LintResult } from "#core/mod.ts";
 import {
-  adviceKindOf,
   canCheck,
   currentResult,
   INITIAL_SESSION,
@@ -28,15 +27,7 @@ const CHECKED: Session = {
   check: { phase: "done", result: RESULT },
 };
 
-Deno.test("adviceKindOf follows the Explain and Fix options", () => {
-  assertEquals(adviceKindOf({ explain: false, fix: false }), undefined);
-  assertEquals(adviceKindOf({ explain: true, fix: false }), "explain");
-  assertEquals(adviceKindOf({ explain: false, fix: true }), "fix");
-  assertEquals(adviceKindOf({ explain: true, fix: true }), "both");
-});
-
 Deno.test("the initial session starts unchecked with the default context", () => {
-  assertEquals(INITIAL_SESSION.options, { explain: false, fix: false });
   assertEquals(INITIAL_SESSION.contextId, "general");
   assertEquals(currentResult(INITIAL_SESSION), undefined);
 });
@@ -45,7 +36,7 @@ Deno.test("currentResult is available while advice is pending", () => {
   assertEquals(
     currentResult({
       ...CHECKED,
-      check: { phase: "advising", result: RESULT, kind: "fix" },
+      check: { phase: "advising", result: RESULT },
     }),
     RESULT,
   );

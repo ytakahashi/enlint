@@ -77,21 +77,102 @@ Deno.test("run handles help and version without input or credentials", async () 
   assertEquals(version.stdout(), "enlint 0.1.0\n");
 });
 
-Deno.test("run maps advice flags and combines both in one request", async () => {
-  const cases = [
-    { args: ["--explain"], kind: "explain" },
-    { args: ["--fix"], kind: "fix" },
-    { args: ["--explain", "--fix"], kind: "both" },
-  ] as const;
+Deno.test("run requests explanations and rewrites together for issues", async () => {
+  const harness = createHarness(outcome(3));
 
-  for (const { args, kind } of cases) {
-    const harness = createHarness(outcome(3.2));
+  assertEquals(await run(["Message"], harness.dependencies), 0);
+  assertEquals(harness.evaluator.requests.length, 1);
+  assertEquals(harness.advisor.requests.length, 1);
+  assertEquals(harness.advisor.requests[0].kind, "both");
+  assertEquals(harness.advisor.requests[0].lintResult.text, "Message");
+  assertEquals(harness.advisor.requests[0].profile.id, "general");
+  assertStringIncludes(harness.stdout(), "Suggested rewrites");
+  assertEquals(harness.stderr(), "");
+});
 
-    assertEquals(await run([...args, "Message"], harness.dependencies), 0);
-    assertEquals(harness.advisor.requests.length, 1);
-    assertEquals(harness.advisor.requests[0].kind, kind);
-    assertEquals(harness.advisor.requests[0].lintResult.text, "Message");
-    assertEquals(harness.advisor.requests[0].profile.id, "general");
+Deno.test("run skips advice when the result has no issues", async () => {
+  // 3.4 scores 85, at or above every issue threshold.
+  const harness = createHarness(outcome(3.4), {
+    openAiCredential: undefined,
+  });
+
+  assertEquals(await run(["Message"], harness.dependencies), 0);
+  assertEquals(harness.advisor.requests.length, 0);
+  assertEquals(harness.stdout().includes("Suggested rewrites"), false);
+  assertEquals(harness.stderr(), "");
+});
+
+Deno.test("run skips advice with --lint-only", async () => {
+  const harness = createHarness(outcome(3), { openAiCredential: undefined });
+
+  assertEquals(
+    await run(
+      ["--lint-only", "--output", "json", "Message"],
+      harness.dependencies,
+    ),
+    0,
+  );
+  assertEquals(harness.advisor.requests.length, 0);
+  assertEquals(JSON.parse(harness.stdout()).advice, null);
+  assertEquals(harness.stderr(), "");
+});
+
+Deno.test("run writes the text lint result before requesting advice", async () => {
+  const harness = createHarness(outcome(3));
+  let stdoutAtAdvice: string | undefined;
+  const dependencies: RunDependencies = {
+    ...harness.dependencies,
+    advisor: {
+      advise(request) {
+        stdoutAtAdvice = harness.stdout();
+        return harness.advisor.advise(request);
+      },
+    },
+  };
+
+  assertEquals(await run(["Message"], dependencies), 0);
+  assertEquals(
+    stdoutAtAdvice?.endsWith("Status: Understandable, but could be improved\n"),
+    true,
+  );
+  assertEquals(stdoutAtAdvice?.includes("Suggested rewrites"), false);
+  assertStringIncludes(harness.stdout(), "Suggested rewrites");
+});
+
+Deno.test("run writes JSON only once advice has settled", async () => {
+  const harness = createHarness(outcome(3));
+  let stdoutAtAdvice: string | undefined;
+  const dependencies: RunDependencies = {
+    ...harness.dependencies,
+    advisor: {
+      advise(request) {
+        stdoutAtAdvice = harness.stdout();
+        return harness.advisor.advise(request);
+      },
+    },
+  };
+
+  assertEquals(await run(["--output", "json", "Message"], dependencies), 0);
+  assertEquals(stdoutAtAdvice, "");
+  assertEquals(JSON.parse(harness.stdout()).advice, {
+    explanations: [],
+    candidates: [],
+  });
+});
+
+Deno.test("run skips advice with a notice when OPENAI_API_KEY is missing", async () => {
+  for (const openAiCredential of [undefined, " "]) {
+    const harness = createHarness(outcome(3), { openAiCredential });
+
+    assertEquals(
+      await run(["--min-score", "80.1", "Message"], harness.dependencies),
+      1,
+    );
+    assertStringIncludes(harness.stdout(), "Score: 75/100");
+    assertEquals(harness.stdout().includes("Suggested rewrites"), false);
+    assertStringIncludes(harness.stderr(), "OPENAI_API_KEY");
+    assertStringIncludes(harness.stderr(), "--lint-only");
+    assertEquals(harness.advisor.requests.length, 0);
   }
 });
 
@@ -100,14 +181,14 @@ Deno.test("run includes successful advice in JSON", async () => {
     explanations: [],
     candidates: [{ text: "Rewritten message.", rationale: "It is clearer." }],
   };
-  // Rewrites only exist for a result that flagged something, so this scores
-  // below the issue-free threshold rather than at it.
+  // Advice is only requested for a result that flagged something, so this
+  // scores below the issue-free threshold rather than at it.
   const harness = createHarness(outcome(3), {
     advisorResponse: { outcome: advice },
   });
 
   assertEquals(
-    await run(["--fix", "--output", "json", "Message"], harness.dependencies),
+    await run(["--output", "json", "Message"], harness.dependencies),
     0,
   );
   assertEquals(JSON.parse(harness.stdout()).advice, advice);
@@ -115,13 +196,13 @@ Deno.test("run includes successful advice in JSON", async () => {
 });
 
 Deno.test("run keeps lint output and exit status when advice fails", async () => {
-  const failure = createHarness(outcome(3.2), {
+  const failure = createHarness(outcome(3), {
     advisorResponse: { error: new Error("advisor unavailable") },
   });
 
   assertEquals(
     await run(
-      ["--fix", "--output", "json", "--min-score", "80.1", "Message"],
+      ["--output", "json", "--min-score", "80.1", "Message"],
       failure.dependencies,
     ),
     1,
@@ -153,12 +234,12 @@ Deno.test("run reports classified advice failures without discarding lint output
   ] as const;
 
   for (const { error, message } of cases) {
-    const harness = createHarness(outcome(4), {
+    const harness = createHarness(outcome(3), {
       advisorResponse: { error },
     });
 
-    assertEquals(await run(["--explain", "Message"], harness.dependencies), 0);
-    assertStringIncludes(harness.stdout(), "Score: 100/100");
+    assertEquals(await run(["Message"], harness.dependencies), 0);
+    assertStringIncludes(harness.stdout(), "Score: 75/100");
     assertEquals(harness.stderr(), `enlint: ${message}\n`);
     assertEquals(harness.evaluator.requests.length, 1);
     assertEquals(harness.advisor.requests.length, 1);
@@ -181,7 +262,7 @@ Deno.test("run sends usage and input failures only to stderr", async () => {
   assertEquals(empty.stdout(), "");
 });
 
-Deno.test("run reports unknown contexts and missing credentials before evaluation", async () => {
+Deno.test("run reports unknown contexts and a missing evaluation key before evaluation", async () => {
   const context = createHarness(outcome(4));
   assertEquals(
     await run(["--context", "unknown", "Message"], context.dependencies),
@@ -194,24 +275,6 @@ Deno.test("run reports unknown contexts and missing credentials before evaluatio
   assertEquals(credential.stdout(), "");
   assertStringIncludes(credential.stderr(), "TYPESAFE_API_KEY");
   assertEquals(credential.evaluator.requests.length, 0);
-
-  const adviceCredential = createHarness(outcome(4), {
-    openAiCredential: undefined,
-  });
-  assertEquals(
-    await run(["--explain", "Message"], adviceCredential.dependencies),
-    2,
-  );
-  assertEquals(adviceCredential.stdout(), "");
-  assertStringIncludes(adviceCredential.stderr(), "OPENAI_API_KEY");
-  assertEquals(adviceCredential.evaluator.requests.length, 0);
-  assertEquals(adviceCredential.advisor.requests.length, 0);
-
-  const unusedAdviceCredential = createHarness(outcome(4), {
-    openAiCredential: undefined,
-  });
-  assertEquals(await run(["Message"], unusedAdviceCredential.dependencies), 0);
-  assertEquals(unusedAdviceCredential.evaluator.requests.length, 1);
 });
 
 Deno.test("run leaves stdout empty when evaluation fails", async () => {
