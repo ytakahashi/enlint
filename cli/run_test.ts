@@ -11,6 +11,7 @@ import {
   OpenAiRateLimitError,
   OpenAiTimeoutError,
 } from "#infra/llm/openai_advisor.ts";
+import { CLEAR_LINE } from "./progress.ts";
 import { run, type RunDependencies } from "./run.ts";
 
 Deno.test("run evaluates a positional message and writes text output", async () => {
@@ -318,10 +319,84 @@ Deno.test("run enables color only for an eligible text terminal", async () => {
   );
 });
 
+Deno.test("run shows progress on a terminal and clears it before each write", async () => {
+  const harness = createHarness(outcome(3), { stderrTerminal: true });
+
+  assertEquals(await run(["Message"], harness.dependencies), 0);
+  assertEquals(
+    harness.writes.map(({ stream, text }) =>
+      stream === "stderr" ? text : `stdout: ${text.split("\n")[0]}`
+    ),
+    [
+      `${CLEAR_LINE}⠋ Evaluating…`,
+      CLEAR_LINE,
+      "stdout: Score: 75/100",
+      `${CLEAR_LINE}⠋ Generating advice…`,
+      CLEAR_LINE,
+      "stdout: ",
+    ],
+  );
+});
+
+Deno.test("run clears progress before JSON and before advice notices", async () => {
+  const harness = createHarness(outcome(3), {
+    stderrTerminal: true,
+    openAiCredential: undefined,
+  });
+
+  assertEquals(
+    await run(["--output", "json", "Message"], harness.dependencies),
+    0,
+  );
+  assertEquals(
+    harness.writes.map(({ stream, text }) =>
+      stream === "stdout"
+        ? "stdout"
+        : text.startsWith("enlint: ")
+        ? "notice"
+        : text
+    ),
+    [
+      `${CLEAR_LINE}⠋ Evaluating…`,
+      CLEAR_LINE,
+      `${CLEAR_LINE}⠋ Generating advice…`,
+      CLEAR_LINE,
+      "stdout",
+      "notice",
+    ],
+  );
+});
+
+Deno.test("run clears progress before reporting an evaluation failure", async () => {
+  const harness = createHarness(outcome(3), { stderrTerminal: true });
+  const dependencies: RunDependencies = {
+    ...harness.dependencies,
+    evaluator: {
+      evaluate: () => Promise.reject(new Error("gateway unavailable")),
+    },
+  };
+
+  assertEquals(await run(["Message"], dependencies), 2);
+  assertEquals(harness.stdout(), "");
+  assertEquals(
+    harness.stderr(),
+    `${CLEAR_LINE}⠋ Evaluating…${CLEAR_LINE}enlint: Evaluation failed: gateway unavailable\n`,
+  );
+});
+
+Deno.test("run shows no progress when stderr is not a terminal", async () => {
+  const harness = createHarness(outcome(3));
+
+  assertEquals(await run(["Message"], harness.dependencies), 0);
+  assertEquals(harness.stderr(), "");
+  assertEquals(harness.repeats(), 0);
+});
+
 type HarnessOptions = {
   readonly stdinText?: string;
   readonly stdinTerminal?: boolean;
   readonly stdoutTerminal?: boolean;
+  readonly stderrTerminal?: boolean;
   readonly credential?: string | undefined;
   readonly openAiCredential?: string | undefined;
   readonly noColorEnvironment?: string;
@@ -335,6 +410,9 @@ function createHarness(
   let stdout = "";
   let stderr = "";
   let stdinReads = 0;
+  let repeats = 0;
+  /** Both streams in write order, to check where the indicator is cleared. */
+  const writes: { readonly stream: "stdout" | "stderr"; text: string }[] = [];
   const evaluator = new FakeEvaluator(evaluationOutcome);
   const advisor = new FakeAdvisor(
     options.advisorResponse ?? {
@@ -361,13 +439,23 @@ function createHarness(
       isTerminal: () => options.stdoutTerminal ?? false,
       write: (text) => {
         stdout += text;
+        writes.push({ stream: "stdout", text });
         return Promise.resolve();
       },
     },
     stderr: {
+      isTerminal: () => options.stderrTerminal ?? false,
       write: (text) => {
         stderr += text;
+        writes.push({ stream: "stderr", text });
         return Promise.resolve();
+      },
+    },
+    // Never ticks: each indicator draws only its first frame.
+    scheduler: {
+      repeat: () => {
+        repeats++;
+        return () => {};
       },
     },
     getEnv: (name) => {
@@ -386,6 +474,8 @@ function createHarness(
     stdout: () => stdout,
     stderr: () => stderr,
     stdinReads: () => stdinReads,
+    repeats: () => repeats,
+    writes,
   };
 }
 

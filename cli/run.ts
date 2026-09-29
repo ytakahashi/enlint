@@ -21,10 +21,15 @@ import {
 import { formatJson } from "./format/json.ts";
 import { formatAdviceText, formatLintText } from "./format/text.ts";
 import { resolveInput, type Stdin } from "./input.ts";
+import {
+  createTerminalProgress,
+  NO_PROGRESS,
+  type Scheduler,
+  track,
+} from "./progress.ts";
+import type { TextWriter } from "./text_writer.ts";
 
-export type TextWriter = {
-  readonly write: (text: string) => Promise<void>;
-};
+export type { TextWriter };
 
 export type RunDependencies = {
   readonly evaluator: Evaluator;
@@ -33,7 +38,10 @@ export type RunDependencies = {
   readonly stdout: TextWriter & {
     readonly isTerminal: () => boolean;
   };
-  readonly stderr: TextWriter;
+  readonly stderr: TextWriter & {
+    readonly isTerminal: () => boolean;
+  };
+  readonly scheduler: Scheduler;
   readonly getEnv: (name: string) => string | undefined;
   readonly version: string;
 };
@@ -64,7 +72,17 @@ export async function run(
     const text = await resolveInput(command.message, dependencies.stdin);
     requireCredentials(dependencies.getEnv);
 
-    const result = await lintMessage({ text, profile }, dependencies.evaluator);
+    // The indicator redraws its line with control sequences, so it is shown
+    // only on a terminal. stdout may still be redirected: the indicator is
+    // cleared before anything is written to either stream.
+    const progress = dependencies.stderr.isTerminal()
+      ? createTerminalProgress(dependencies.stderr, dependencies.scheduler)
+      : NO_PROGRESS;
+    const result = await track(
+      progress,
+      "Evaluating…",
+      () => lintMessage({ text, profile }, dependencies.evaluator),
+    );
     const textOptions = {
       // https://no-color.org: NO_COLOR disables color when present and not
       // empty, so an empty value must leave color enabled.
@@ -80,7 +98,11 @@ export async function run(
 
     const advice = command.lintOnly || !isAdvisable(result)
       ? { outcome: undefined, notice: undefined }
-      : await requestAdvice(result, profile, dependencies);
+      : await track(
+        progress,
+        "Generating advice…",
+        () => requestAdvice(result, profile, dependencies),
+      );
     if (command.output === "json") {
       await dependencies.stdout.write(
         formatJson({ lintResult: result, advice: advice.outcome }),

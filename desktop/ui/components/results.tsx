@@ -28,7 +28,7 @@ export function Results(
     case "linting":
       return (
         <section class="results">
-          <p class="pending">Evaluating…</p>
+          <p class="busy" role="status">Evaluating</p>
         </section>
       );
     case "failed":
@@ -54,7 +54,7 @@ export function Results(
       <Tone result={check.result} />
       <Issues result={check.result} advice={advice} />
       {check.phase === "advising"
-        ? <p class="pending">Generating advice…</p>
+        ? <p class="busy" role="status">Generating advice</p>
         : (
           <Advice
             controller={controller}
